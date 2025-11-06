@@ -1,0 +1,3 @@
+
+    config BOARD_STMF303R
+		  select SOC_STM32F303XE
