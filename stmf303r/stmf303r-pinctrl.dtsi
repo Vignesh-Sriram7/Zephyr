@@ -1,0 +1,33 @@
+#include <zephyr/dt-bindings/pinctrl/stm32-pinctrl-common.h>
+#include <zephyr/dt-bindings/pinctrl/stm32-pinctrl.h>
+#include <st/f3/stm32f303Xe.dtsi>
+#include "arduino_r3_connector.dtsi"
+#include "st_morpho_connector.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+    pin-controller {
+        /* USART1 pin configuration */
+        usart1_tx_pa9: usart1_tx_pa9 {
+            pinmux = <STM32_PINMUX('A', 9, AF7)>;
+            bias-pull-up;
+            drive-push-pull;
+            slew-rate = <1>;
+        };
+        usart1_rx_pa10: usart1_rx_pa10 {
+            pinmux = <STM32_PINMUX('A', 10, AF7)>;
+            bias-pull-up;
+        };
+        /* USART2 pin configuration */
+        usart2_tx_pa2: usart2_tx_pa2 {
+            pinmux = <STM32_PINMUX('A', 2, AF7)>;
+            bias-pull-up;
+            drive-push-pull;
+            slew-rate = <1>;
+        };
+        usart2_rx_pa3: usart2_rx_pa3 {
+            pinmux = <STM32_PINMUX('A', 3, AF7)>;
+            bias-pull-up;
+        };
+    };
+};

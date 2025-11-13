@@ -1,0 +1,6 @@
+board:
+  name: stmf303r
+  full_name: Nucleo F303RE
+  vendor: st
+  socs:
+    - name: stm32f303xe
