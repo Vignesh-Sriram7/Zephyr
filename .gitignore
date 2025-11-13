@@ -1,0 +1,14 @@
+# Zephyr build artifacts
+wifi_mqtt_sensor/build/
+
+# Object and output files
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# Temporary files
+*.log
+*.swp
