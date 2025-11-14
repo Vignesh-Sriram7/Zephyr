@@ -91,15 +91,27 @@ int main(void)
         printk("Error (%d): Could not perform DNS lookup\r\n", ret);
         return 0;
     }
+    else {
+        print_addrinfo(&res);
+        zsock_freeaddrinfo(res);
+    }
 
     // Print the results of the DNS lookup
     print_addrinfo(&res);
-
+    mqtt_process_loop();
     while(1)
     {
+        mqtt_input(&client_ctx);
+        mqtt_live(&client_ctx);
+        
         if(mqtt_connected)
         {
             app_mqtt_publish(&client_ctx);
+        }
+        static uint32_t last_publish = 0;
+        if (mqtt_connected && (k_uptime_get_32() - last_publish > 5000)) {
+            app_mqtt_publish(&client_ctx);
+            last_publish = k_uptime_get_32();
         }
         k_msleep(5000);
     }
