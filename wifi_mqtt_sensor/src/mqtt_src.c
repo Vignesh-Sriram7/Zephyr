@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/net/mqtt.h>
@@ -22,9 +23,7 @@ static struct sockaddr_storage broker;
 
 bool mqtt_connected = false;
 
-/********************************************************************
- * MQTT EVENT HANDLER
- ********************************************************************/
+
 static void mqtt_event_handler(struct mqtt_client *const client,
                                const struct mqtt_evt *evt)
 {
@@ -47,9 +46,7 @@ static void mqtt_event_handler(struct mqtt_client *const client,
     }
 }
 
-/********************************************************************
- * MQTT INIT (DNS, CONFIG)
- ********************************************************************/
+
 void mqtt_init(void)
 {
     mqtt_client_init(&client_ctx);
@@ -95,9 +92,7 @@ void mqtt_init(void)
     }
 }
 
-/********************************************************************
- * MQTT CONNECT
- ********************************************************************/
+
 void app_mqtt_connect(struct mqtt_client *client_ctx)
 {
     int rc = mqtt_connect(client_ctx);
@@ -118,23 +113,21 @@ void app_mqtt_connect(struct mqtt_client *client_ctx)
     LOG_INF("MQTT Connected and ready to publish!");
 }
 
-/********************************************************************
- * MQTT PUBLISH
- ********************************************************************/
-int app_mqtt_publish(struct mqtt_client *client_ctx)
+
+int app_mqtt_publish(struct mqtt_client *client_ctx, const char *topic_str, const char *payload)
 {
     struct mqtt_publish_param param;
     struct mqtt_topic topic = {
         .topic = {
-            .utf8 = (uint8_t *)"esp32/test",
-            .size = strlen("esp32/test")
+            .utf8 = (uint8_t *)topic_str,
+            .size = strlen(topic_str)
         },
         .qos = MQTT_QOS_0_AT_MOST_ONCE
     };
 
     param.message.topic = topic;
-    param.message.payload.data = (uint8_t *)"Hello from ESP32 via Zephyr MQTT!";
-    param.message.payload.len = strlen("Hello from ESP32 via Zephyr MQTT!");
+    param.message.payload.data = (uint8_t *)payload;
+    param.message.payload.len = strlen(payload);
     param.message_id = k_uptime_get_32();
     param.dup_flag = 0;
     param.retain_flag = 0;
@@ -150,19 +143,26 @@ int app_mqtt_publish(struct mqtt_client *client_ctx)
     return rc;
 }
 
-/********************************************************************
- * MAIN LOOP (CALL THIS FROM YOUR MAIN THREAD)
- ********************************************************************/
 void mqtt_process_loop(void)
 {
+    static uint32_t last_publish = 0;
+
     while (1) {
         mqtt_input(&client_ctx);
         mqtt_live(&client_ctx);
 
-        if (mqtt_connected) {
-            app_mqtt_publish(&client_ctx);
+        uint32_t now = k_uptime_get_32();
+
+        // Publish every 5 seconds
+        if (mqtt_connected && (now - last_publish > 5000)) {
+            const char *topic = "esp32/test";
+            const char *payload = "Hello from ESP32";
+
+            app_mqtt_publish(&client_ctx, topic, payload);
+
+            last_publish = now;
         }
 
-        k_msleep(2000);
+        k_msleep(100); // small sleep to avoid busy loop
     }
 }

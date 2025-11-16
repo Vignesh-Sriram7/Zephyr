@@ -1,3 +1,18 @@
+{
+    aliases {
+        my-dht11 = &dht11;
+    };
+
+
+dht11: dht11@0 {
+    compatible = "custom,dht11";
+    dio-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>; // DIO connected to GPIO16
+    status = "okay";
+};
+
+};
+
+
 &wifi {
     status = "okay";
 };
