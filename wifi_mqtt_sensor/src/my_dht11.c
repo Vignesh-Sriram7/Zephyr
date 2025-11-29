@@ -9,9 +9,14 @@
 
 #include "my_dht11.h"
 
-LOG_MODULE_REGISTER(dht11_sensor, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(dht11_sensor);
 
-static const struct device *const dht =DEVICE_DT_GET(DT_ALIAS(my_dht11));
+static const struct device *const dht =DEVICE_DT_GET(DT_NODELABEL(dht11));
+
+int dht11_to_int(const struct sensor_value *v)
+{
+    return v->val1;    // val1 is integer part
+}
 
 int dht11_init(void)
 {
@@ -47,8 +52,8 @@ int dht11_read(int *temp, int *humidity)
         LOG_ERR("Humidity read error: %d", ret);
         return ret;
     }
-     *temp = sensor_value_to_int(&t);
-    *humidity = sensor_value_to_int(&h);
+     *temp = dht11_to_int(&t);
+    *humidity = dht11_to_int(&h);
 
     LOG_DBG("Read DHT11 -> Temp=%d C, Hum=%d %%", *temp, *humidity);
 

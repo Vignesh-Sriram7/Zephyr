@@ -4,8 +4,12 @@
 #include <zephyr/net/socket.h>
 #include <zephyr/net/http/client.h>
 #include <zephyr/net/mqtt.h>
+#include <zephyr/drivers/sensor.h>
 #include "wifi.h"
 #include "mqtt_src.h"
+#include "my_dht11.h"
+
+LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 extern struct mqtt_client client_ctx;
 extern bool mqtt_connected;
 
@@ -96,19 +100,44 @@ int main(void)
         zsock_freeaddrinfo(res);
     }
 
+    if (dht11_init() != 0) {
+        printk("Failed to initialize DHT11\n");
+    } else {
+        printk("DHT11 initialized successfully\n");
+    }
+
+    int temperature = 0;
+    int humidity = 0;
+    static uint32_t last_publish = 0;
+
     // Print the results of the DNS lookup
     mqtt_process_loop();
     while(1)
     {
         mqtt_input(&client_ctx);
         mqtt_live(&client_ctx);
-        static uint32_t last_publish = 0;
-        if (mqtt_connected && (k_uptime_get_32() - last_publish > 5000)) {
-            app_mqtt_publish(&client_ctx);
-            last_publish = k_uptime_get_32();
+        uint32_t now = k_uptime_get_32();
+
+    // Publish every 5 seconds if connected
+    if (mqtt_connected && (now - last_publish > 5000)) {
+        int temp, hum;
+
+        if (dht11_read(&temp, &hum) == 0) {
+            char payload[64];
+            snprintf(payload, sizeof(payload),
+                     "{\"temperature\": %d, \"humidity\": %d}", temp, hum);
+
+            app_mqtt_publish(&client_ctx, "esp32/sensor/dht11", payload);
+
+            LOG_INF("Published DHT11 -> T=%d C, H=%d %%", temp, hum);
+        } else {
+            LOG_ERR("Failed to read DHT11");
         }
-        k_msleep(5000);
+
+        last_publish = now;
     }
 
-    return 0;
+    // Short sleep to avoid busy loop
+    k_msleep(100); 
+    }
 }
