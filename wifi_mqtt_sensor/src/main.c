@@ -104,6 +104,7 @@ int main(void)
         printk("Failed to initialize DHT11\n");
     } else {
         printk("DHT11 initialized successfully\n");
+        k_msleep(1000);
     }
 
     int temperature = 0;
@@ -111,9 +112,10 @@ int main(void)
     static uint32_t last_publish = 0;
 
     // Print the results of the DNS lookup
-    mqtt_process_loop();
+    //mqtt_process_loop();
     while(1)
     {
+
         mqtt_input(&client_ctx);
         mqtt_live(&client_ctx);
         uint32_t now = k_uptime_get_32();
@@ -121,6 +123,9 @@ int main(void)
     // Publish every 5 seconds if connected
     if (mqtt_connected && (now - last_publish > 5000)) {
         int temp, hum;
+                if (dht11_read(&temp, &hum) == 0) {
+            printk("DEBUG: DHT11 -> Temp=%d C, Hum=%d %%\n", temp, hum);
+            }
 
         if (dht11_read(&temp, &hum) == 0) {
             char payload[64];

@@ -1,17 +1,17 @@
-/ {
-    aliases {
-        my-dht11 = &dht11;
+    / {
+        aliases {
+            my-dht11 = &dht11;
+        };
+
+        /* DHT11 on GPIO16 */
+        dht11: dht11 {
+            compatible = "aosong,dht";
+            dio-gpios = <&gpio 4 GPIO_ACTIVE_HIGH>;
+            status = "okay";
+        };
     };
 
-    /* DHT11 on GPIO16 */
-    dht11: dht11 {
-        compatible = "aosong,dht";
-        dio-gpios = <&gpio 16 GPIO_ACTIVE_HIGH>;
+    /* Enable WiFi */
+    &wifi {
         status = "okay";
     };
-};
-
-/* Enable WiFi */
-&wifi {
-    status = "okay";
-};
