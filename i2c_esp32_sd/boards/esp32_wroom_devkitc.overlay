@@ -1,0 +1,44 @@
+//Create an alias for the temp sensor and the display
+/{
+    aliases{
+        my-temp = &my_bme280_i2c;   // alsias for the temp sensor
+        my-disp = &my_ssd1306_i2c; // alias for the display
+    };
+
+
+&pinctrl
+{
+    //Custom pin settings for the I2C bus in esp32_devkitc_wroom --> allows you to set any gpio pin as i2c if not used for critical function
+    i2c0_custom_pins:i2c0_custom_pins {
+        group1 {
+            pinmux = <I2C0_SDA_GPIO15>, <I2C0_SCL_GPIO16>;	// SDA on GPIO15, SCL on GPIO16
+            bias-pull-up; 									// Enable pull-up resistors for both pins
+            drive-open-drain; 								// Required for I2C
+            output-high; 									// Start with lines high (inactive state)
+        };
+    };
+};
+
+&i2c0 {
+    pinctrl-0 = <&i2c0_custom_pins>; 						// Use the custom pin configuration
+    status = "okay"; 										// Enable I2C0 interface
+
+	// Label: name of our device node
+    my_bme280_i2c: bme280@77 {                              // The name of the node needs to tbe the device anme and the register address
+        compatible = "bosch,bme280";                        // The compatible of the device 
+        reg = <0x77>; 				
+    };
+    my_ssd1306_i2c: ssd1306@3C {                               // The name of the node needs to tbe the device anme and the register address
+        compatible = "solomon,ssd1306";                        // The compatible of the device 
+        reg = <0x3C>;                                          // The register start address of the i2c for the device  
+        multiplex-ratio = 63;                                  // The multiplex ratio for 128x64 display --> tells how many rows are in the display
+        segment-offset = 0;                                    // The start of the fist column
+        page-offset = 0;                                       // The start of the first page
+        display-offset = 0;                                    // The start of top line
+        prechargep = 15;                                       // The default value-> for the lights of the display to light up correctly
+        reset-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;              // To rest the display-> custom reset button in gpio4
+    };
+};
+
+
+};
