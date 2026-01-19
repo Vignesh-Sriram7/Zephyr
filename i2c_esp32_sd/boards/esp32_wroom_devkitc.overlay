@@ -4,7 +4,7 @@
         my-temp = &my_bme280_i2c;   // alsias for the temp sensor
         my-disp = &my_ssd1306_i2c; // alias for the display
     };
-
+};
 
 &pinctrl
 {
@@ -28,17 +28,18 @@
         compatible = "bosch,bme280";                        // The compatible of the device 
         reg = <0x77>; 				
     };
-    my_ssd1306_i2c: ssd1306@3C {                               // The name of the node needs to tbe the device anme and the register address
-        compatible = "solomon,ssd1306";                        // The compatible of the device 
-        reg = <0x3C>;                                          // The register start address of the i2c for the device  
-        multiplex-ratio = 63;                                  // The multiplex ratio for 128x64 display --> tells how many rows are in the display
-        segment-offset = 0;                                    // The start of the fist column
-        page-offset = 0;                                       // The start of the first page
-        display-offset = 0;                                    // The start of top line
-        prechargep = 15;                                       // The default value-> for the lights of the display to light up correctly
+    my_ssd1306_i2c: ssd1306@3c {                               // The name of the node needs to tbe the device anme and the register address
+        compatible = "solomon,ssd1306fb-i2c";                        // The compatible of the device 
+        reg = <0x3c>;                                          // The register start address of the i2c for the device  
+        width = <128>;
+        height = <64>;
+        multiplex-ratio = <63>;                                  // The multiplex ratio for 128x64 display --> tells how many rows are in the display
+        segment-offset = <0>;                                    // The start of the fist column
+        page-offset = <0>;                                       // The start of the first page
+        display-offset = <0>;                                    // The start of top line
+        prechargep = <15>;                                       // The default value-> for the lights of the display to light up correctly
         reset-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;              // To rest the display-> custom reset button in gpio4
     };
 };
 
 
-};

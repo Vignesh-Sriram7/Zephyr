@@ -45,8 +45,8 @@ static struct k_thread display_thread;
 K_MUTEX_DEFINE(temp_mutex);
 
 //Get device configurations
-static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_bme280_i2c));
-static const struct device *const ssd1306 = DEVICE_DT_GET(DT_ALIAS(my_ssd1306_i2c));
+static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp));
+static const struct device *const ssd1306 = DEVICE_DT_GET(DT_ALIAS(my_disp));
 
 // Sensor thread function 
 void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
@@ -56,13 +56,13 @@ void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
     while(1){
 
     
-        ret = bme280_sample_fetch(bme280);
+        ret = sensor_sample_fetch(bme280);
         if(ret < 0){
             printk("Sample Fetch Error: %d\n", ret);
             continue;
         }
 
-        ret = bme280_channel_get(bme280, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+        ret = sensor_channel_get(bme280, SENSOR_CHAN_AMBIENT_TEMP, &temp);
         if(ret < 0){
             printk("Channel Get Error: %d\n", ret);
             continue;
@@ -70,7 +70,7 @@ void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
         k_mutex_lock(&temp_mutex, K_FOREVER);
         temp_int = temp.val1;
         k_mutex_unlock(&temp_mutex);
-        printk("Temperature: %d.%06d\n, temp.val1, tmp.val2");
+        printk("Temperature: %d.%06d\n", temp.val1, temp.val2);
         k_msleep(sensor_sleep_ms);
     }
 }
@@ -109,7 +109,7 @@ void display_thread_start(void *arg_1, void *arg_2, void *arg_3)
 
 int main(void)
 {
-    int ret;
+    
     k_tid_t sensor_tid;
     k_tid_t display_tid;
 
@@ -149,7 +149,7 @@ int main(void)
 
         
     while (1) {
-        k_msleep(1000);
+        k_msleep(sleep_time_ms);
     }   
     return 0;
 }
