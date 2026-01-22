@@ -12,7 +12,6 @@ static const struct gpio_dt_spec led3 = GPIO_DT_SPEC(DT_ALIAS(led_3), gpios);
 int main (void)
 {
     int ret;
-    int state = 0;
     int b0=0, b1=0, b2=0, b3=0;
 
 // Checking if the leds are initialized

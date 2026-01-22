@@ -1,0 +1,43 @@
+/ {
+    aliases {
+        my-temp = &my_bme280_i2c;   // Alias for BME280 temperature sensor
+        my-disp = &my_ssd1306_i2c;  // Alias for SSD1306 display
+    };
+};
+
+&pinctrl {
+    i2c0_custom_pins: i2c0_custom_pins {    
+        group1 {
+            pinmux = <I2C0_SDA_GPIO15>, <I2C0_SCL_GPIO16>;  // GPIO15 as SDA, GPIO16 as SCL
+            bias-pull-up;
+            drive-open-drain;
+            output-high;
+        };
+    };
+};
+
+&i2c0 {
+    status = "okay";    // Enable I2C0
+    pinctrl-0 = <&i2c0_custom_pins>; // Apply custom pin configuration
+    pinctrl-names = "default";
+
+    my_bme280_i2c: bme280@77 {  // BME280 sensor at I2C address 0x77 -> check the documentation for the address. By default 0x77. The node name needs to be the sensor name followed by the address
+        compatible = "bosch,bme280"; // Check the compatible in the drivers->sensors->bme280
+        reg = <0x77>;
+        status = "okay";    // Make sure to have the status as okay
+    };
+
+    my_ssd1306_i2c: ssd1306@3c {    // SSD1306 display driver at I2c address 0x3c (lowercase)
+        compatible = "solomon,ssd1306fb";   // Check drivers->display->ssd1306. Use this compatible as it works. ssd1306fb-i2c or ssd1306 doesnt let the elf file identify the node
+        reg = <0x3c>;
+        width = <128>;
+        height = <64>;
+        multiplex-ratio = <63>; // The multiplex ratio for 128x64 display -> tells how many rows are in the display
+        segment-offset = <0>;   // The start of the fist column
+        page-offset = <0>;     // The start of the first page
+        display-offset = <0>;   // The start of top line
+        prechargep = <15>;  // The default value-> for the lights of the display to light up correctly
+        reset-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;   // To rest the display-> custom reset button in gpio4
+        status = "okay";    // Make sure to have the status as okay
+    };
+};
