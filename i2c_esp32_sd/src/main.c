@@ -16,6 +16,10 @@ static uint8_t oled_buf[128];  // 1 page = 8px height
 
 static int temp_int;   // shared temperature (integer °C)
 
+/* A hard‑coded 8×8 pixel font for numbers
+ Each digit (0–9) is drawn as an 8‑byte, 8‑pixel‑tall pattern.
+Every byte represents one row of pixels, and each bit in that byte is on/off for the OLED*/
+
 static const uint8_t digit_font[10][8] = {
     {0x3C,0x66,0x6E,0x76,0x66,0x66,0x3C,0x00}, // 0
     {0x18,0x38,0x18,0x18,0x18,0x18,0x3C,0x00}, // 1
@@ -48,14 +52,14 @@ K_MUTEX_DEFINE(temp_mutex);
 static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp));
 static const struct device *const ssd1306 = DEVICE_DT_GET(DT_ALIAS(my_disp));
 
-// Sensor thread function 
+// Sensor thread start function 
 void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
 {
     int ret;
     struct sensor_value temp;
     while(1){
 
-    
+        // Use the sensor sample fetch rather than the bme280 dedicated function
         ret = sensor_sample_fetch(bme280);
         if(ret < 0){
             printk("Sample Fetch Error: %d\n", ret);
@@ -67,6 +71,7 @@ void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
             printk("Channel Get Error: %d\n", ret);
             continue;
         }
+        // Lock the mutex variable which is the temp.val1 accessed by both the threads
         k_mutex_lock(&temp_mutex, K_FOREVER);
         temp_int = temp.val1;
         k_mutex_unlock(&temp_mutex);
@@ -75,7 +80,7 @@ void sensor_thread_start(void *arg_1, void *arg_2, void *arg_3)
     }
 }
 
-// Display thread function
+// Display thread start function
 void display_thread_start(void *arg_1, void *arg_2, void *arg_3)
 {
      while (1) {
@@ -85,14 +90,17 @@ void display_thread_start(void *arg_1, void *arg_2, void *arg_3)
         local_temp = temp_int;
         k_mutex_unlock(&temp_mutex);
 
-        memset(oled_buf, 0x00, sizeof(oled_buf));
+        memset(oled_buf, 0x00, sizeof(oled_buf)); // Clears the OLED display
 
-        int tens = (local_temp / 10) % 10;
+        // Extract the digits from the temprature value
+        int tens = (local_temp / 10) % 10; 
         int ones = local_temp % 10;
 
+        // Copies the 8×8 bitmap for each digit into the display buffe
         memcpy(&oled_buf[0], digit_font[tens], 8);
         memcpy(&oled_buf[8], digit_font[ones], 8);
 
+        // Describes the buffer to the SSD1306 driver
         struct display_buffer_descriptor desc = {
             .width = 128,
             .height = 8,
@@ -109,7 +117,7 @@ void display_thread_start(void *arg_1, void *arg_2, void *arg_3)
 
 int main(void)
 {
-    
+    // Create thread ids
     k_tid_t sensor_tid;
     k_tid_t display_tid;
 
