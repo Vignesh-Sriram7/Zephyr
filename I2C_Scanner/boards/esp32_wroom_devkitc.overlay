@@ -1,0 +1,22 @@
+/{
+    aliases{
+        my-i2cbus = &i2c0;
+    };
+};
+
+&pinctrl {
+    i2c0_custom_pins: i2c0_custom_pins {    
+        group1 {
+            pinmux = <I2C0_SDA_GPIO15>, <I2C0_SCL_GPIO16>;  // GPIO15 as SDA, GPIO16 as SCL
+            bias-pull-up;
+            drive-open-drain;
+            output-high;
+        };
+    };
+};
+
+&i2c0 {
+    status = "okay";    // Enable I2C0
+    pinctrl-0 = <&i2c0_custom_pins>; // Apply custom pin configuration
+    pinctrl-names = "default";
+};
