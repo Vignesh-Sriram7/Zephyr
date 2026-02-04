@@ -13,8 +13,8 @@ static const int32_t wait_time_ms = 10;
 // Get devicetree configurations 
 
 static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(DT_ALIAS(motor_0));
-static const struct gpio_dt_spec trig = GPIO_DT_SPEC(DT_ALIAS(hc_trig));
-static const struct gpio_dt_spec echo = GPIO_DT_SPEC(DT_ALIAS(hc_echo));
+static const struct gpio_dt_spec trig = GPIO_DT_SPEC_GET(DT_ALIAS(hc_trig),gpios);
+static const struct gpio_dt_spec echo = GPIO_DT_SPEC_GET(DT_ALIAS(hc_echo),gpios);
 
 int main()
 {
@@ -46,7 +46,8 @@ int main()
     gpio_pin_set_dt(&trig, 0);
 
     while(1){
-
+        int echo_val = gpio_pin_get_dt(&echo);
+        printk("Echo Pin State: %d\n", echo_val);
         for(int angle = 0; angle<=180; angle+=5)
         {
             pulse_ns = 500000 + (angle * 2000000 / 180);

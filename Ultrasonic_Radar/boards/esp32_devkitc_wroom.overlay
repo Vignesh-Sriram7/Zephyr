@@ -1,6 +1,6 @@
 #include <zephyr/dt-bindings/pwm/pwm.h>
 
-/{
+/ {
     aliases{
         hc-trig=&hc_trigger;
         hc-echo=&hc_echo;
@@ -8,12 +8,19 @@
     };
 
     my-pwm-motors {
-        compatible = "pwm-servo";
-        motor_0: pwm_motor_0{
+        compatible = "pwm-leds"; // Use a standard compatible string
+        motor_0: pwm_motor_0 {
             pwms = <&ledc0 0 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
-            // address of the hardware controller(phandle); channel; total time of one cycle; start signal HIGH and then go LOW
-            min-pulse-unit = <PWM_USEC(600)>; // Pulse width for the 0 degree in microseconds
-            max-pulse-unit = <PWM_USEC(2400)>; // Pulse width for the 180 degree in microseconds
+        };
+    };
+
+    leds{
+        compatible = "gpio-leds";
+        hc_trigger: d16 {
+            gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        };
+        hc_echo: d17{
+            gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
         };
     };
 };
@@ -36,12 +43,4 @@
 	};
 };
 
-leds{
-    compatible = "gpio-leds";
-    hc_trigger: d16 {
-        gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
-    };
-    hc_echo: d17{
-        gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
-    };
-};
+
