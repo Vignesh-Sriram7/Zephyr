@@ -26,6 +26,7 @@ static const struct gpio_dt_spec echo = GPIO_DT_SPEC_GET(DT_ALIAS(hc_echo),gpios
 // Struct to hold the GPIO callback for the change of echo pin
 static struct gpio_callback echo_cb_data;
 
+// Create the isr to record the start and stop time of the pulse transmission and reception
 void echo_isr(const struct device *dev,
                 struct gpio_callback *cb,
                 uint32_t pins)
@@ -44,6 +45,7 @@ void echo_isr(const struct device *dev,
         
     }
 
+// Handler to do the computation
 void k_work_handler(struct k_work *work){
     // If stop_time is 0 or less than start_time, the ISR never finished
     // because no object was detected in the 50ms window.
