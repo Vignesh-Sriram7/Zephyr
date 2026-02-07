@@ -64,14 +64,16 @@ int main()
             k_busy_wait(10);
             gpio_pin_set_dt(&trig, 0);
 
+            // Check for the echo pin to go high
             counter = 0;
             while(gpio_pin_get_dt(&echo) == 0){
                 counter++;
-                if(counter>MAX_TICKS)
+                if(counter>MAX_TICKS) // Condition to break the detection
                     break;
             }
-            start_time = k_cycle_get_32();  
+            start_time = k_cycle_get_32();  // Record the cycle time
 
+            // Check for the echo pin to go low
             counter2 = 0;
             while(gpio_pin_get_dt(&echo) == 1){
                 counter2++;
@@ -80,6 +82,7 @@ int main()
             }
             stop_time = k_cycle_get_32();
             
+            // If the counter does not max out calculate the distance
             if(counter < MAX_TICKS && counter2 < MAX_TICKS)
             {
                 duration = stop_time - start_time;
