@@ -110,7 +110,7 @@ Angle: 10, Distance: 22 cm
 
 * Verify `pwm_is_ready_dt(&servo)`
 
-###HC-SR04 always reads "No object detected"
+### HC-SR04 always reads "No object detected"
 
 * Ensure Trigger is output, Echo is input
 
