@@ -15,31 +15,30 @@
 
 #define MAX_TICKS 10000 // Threshold to move on from waiting for the reply ping of the ultrasonic sensor
 
+static const int32_t wait_time_ms = 10; // Sleep settings 
 
-// Sleep settings 
-static const int32_t wait_time_ms = 10;
-int ret;
+uint32_t counter=0;     // Counter for the start ping
+uint32_t counter2=0;    // Counter for the end ping
+uint32_t start_time = 0;    // Timer start time    
+uint32_t stop_time = 0;     // Timer stop time
+uint32_t duration = 0;      // Total duration from sending the singal to getting it back
+uint64_t duration_us = 0;
+uint32_t pulse_ns = 0;      // Duty Cycle Pulse
+uint32_t distance_cm = 0;
+int angle = 0;
+
 
 // Get devicetree configurations 
-
 static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(DT_ALIAS(motor_0));
 static const struct gpio_dt_spec trig = GPIO_DT_SPEC_GET(DT_ALIAS(hc_trig),gpios);
 static const struct gpio_dt_spec echo = GPIO_DT_SPEC_GET(DT_ALIAS(hc_echo),gpios);
 
-int radar (void)
-{
-    
-    uint32_t counter=0;     // Counter for the start ping
-    uint32_t counter2=0;    // Counter for the end ping
-    uint32_t start_time = 0;    // Timer start time    
-    uint32_t stop_time = 0;     // Timer stop time
-    uint32_t duration = 0;      // Total duration from sending the singal to getting it back
-    uint32_t pulse_ns = 0;      // Duty Cycle Pulse
+int radar_clockwise(int client_sock){
 
-    // Check if the trigger is ready
-    // Loop over for the clock wise rotation of the servo motor
-        for(int angle = 0; angle<=180; angle+=5)
+    for(int angle = 0; angle<=180; angle+=5)
         {
+            char buf[32];
+
             pulse_ns = 500000 + (angle * 2000000 / 180);
 
             pwm_set_pulse_dt(&servo, pulse_ns);
@@ -72,16 +71,27 @@ int radar (void)
             if(counter < MAX_TICKS && counter2 < MAX_TICKS)
             {
                 duration = stop_time - start_time;
-                uint64_t duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
-                uint32_t distance_cm = (duration_us * 34) / 2000;
+                duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
+                distance_cm = (duration_us * 34) / 2000;
                 printk("Angle: %d, Distance: %u cm\n", angle, distance_cm);
+                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm);
+                int ret = zsock_send(client_sock, buf, strlen(buf), 0);
+                if (ret < 0) {
+                    break;
+                }
             }
             else
                 printk("No object detected");
         }
-        
-        for(int angle = 180; angle>=0; angle-=5)
+        k_msleep(wait_time_ms); 
+}
+
+int radar_aclockwise(int client_sock){
+
+    for(int angle = 180; angle>=0; angle-=5)
+
         {
+            char buf[32];
             pulse_ns = 500000 + (angle * 2000000 / 180);
 
             pwm_set_pulse_dt(&servo, pulse_ns);
@@ -110,28 +120,34 @@ int radar (void)
             if(counter < MAX_TICKS && counter2 < MAX_TICKS)
             {
                 duration = stop_time - start_time;
-                uint64_t duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
-                uint32_t distance_cm = (duration_us * 34) / 2000;
+                duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
+                distance_cm = (duration_us * 34) / 2000;
                 printk("Angle: %d, Distance: %u cm\n", angle, distance_cm);
+                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm);
+                int ret = zsock_send(client_sock, buf, strlen(buf), 0);
+                if (ret < 0) {
+                    break;
+                }
             }
             else
                 printk("No object detected");
-        }
-    
-        return distance_cm;
-            
-    k_msleep(wait_time_ms);    
+        }         
+        k_msleep(wait_time_ms);    
 
 }
 
 
+
 int main(void)
 {
-    struct sockaddr_in *serv_addr;  // Defines the IPv4 internet address structure for the server to listen on
+    struct sockaddr_in serv_addr;  // Defines the IPv4 internet address structure for the server to listen on
     
-    struct sockaddr_in *client_addr;
+    struct sockaddr_in client_addr;
 
     socklen_t client_addr_len = sizeof(client_addr);
+
+    uint32_t live_distance = 0;
+
     int sock;
     int ret;
 
@@ -173,9 +189,9 @@ int main(void)
     wifi_wait_for_ip_addr();
     
     memset(&serv_addr, 0, sizeof(serv_addr));   // Clear memory to prevent garbage values
-    serv_addr->sin_family = AF_INET;              // IPv4
-    serv_addr->sin_port = htons(80);        // htons -> converts the port number from host byte order to network byte order little endian to big endian
-    serv_addr->sin_addr.s_addr = INADDR_ANY;    // Accept connection on any local network interface
+    serv_addr.sin_family = AF_INET;              // IPv4
+    serv_addr.sin_port = htons(80);        // htons -> converts the port number from host byte order to network byte order little endian to big endian
+    serv_addr.sin_addr.s_addr = INADDR_ANY;    // Accept connection on any local network interface
 
 
     // Create a new socket
@@ -202,26 +218,34 @@ int main(void)
 
     while (1) {
 
-        ret = zsock_accept(sock, (struct sockaddr *) &client_addr, &client_addr_len);
-        if (ret < 0) {
+        int client_sock = zsock_accept(sock, (struct sockaddr *) &client_addr, &client_addr_len);
+        if (client_sock < 0) {
             printk("Error (%d): Could not connect to the browser\r\n", errno);
             return 0;
         }
         else
         {
-
-        }
-        
-        ret = zsock_send(sock, header, strlen(header), 0);
+        ret = zsock_send(client_sock, header, strlen(header), 0);
         if (ret < 0) {
             printk("Error (%d): Could not send request\r\n", errno);
             return 0;
         }
 
+        char *html_top = "<html><body style='background:#000;color:#0f0;overflow:hidden'>"
+                 "<canvas id='c'></canvas><script>"
+                 "const v=document.getElementById('c'),x=v.getContext('2d');"
+                 "v.width=v.height=600; x.translate(300,500);" // Center the radar
+                 "function d(a,r){"
+                 "const rad=a*Math.PI/180,px=Math.cos(rad)*r*2,py=-Math.sin(rad)*r*2;"
+                 "x.fillStyle='rgba(0,20,0,0.05)';x.fillRect(-300,-500,600,600);" // Fade effect
+                 "x.strokeStyle='#0f0';x.beginPath();x.moveTo(0,0);x.lineTo(px,py);x.stroke();"
+                 "x.fillStyle='#fff';x.fillRect(px-2,py-2,4,4);}</script>";
 
-    // Close the socket
-    zsock_close(sock);
-
-    return 0;
-}
+        zsock_send(client_sock, html_top, strlen(html_top), 0);
+        
+        radar_clockwise(client_sock);
+        radar_aclockwise(client_sock);
+        zsock_close(client_sock);
+        }
+    }
 }
