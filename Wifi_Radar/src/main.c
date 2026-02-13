@@ -83,7 +83,8 @@ int radar_clockwise(int client_sock){
             else
                 printk("No object detected");
         }
-        k_msleep(wait_time_ms); 
+        k_msleep(wait_time_ms);
+        return 0; 
 }
 
 int radar_aclockwise(int client_sock){
@@ -133,7 +134,7 @@ int radar_aclockwise(int client_sock){
                 printk("No object detected");
         }         
         k_msleep(wait_time_ms);    
-
+        return 0;
 }
 
 
@@ -146,12 +147,11 @@ int main(void)
 
     socklen_t client_addr_len = sizeof(client_addr);
 
-    uint32_t live_distance = 0;
-
+    
     int sock;
     int ret;
 
-    char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
+    char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
     
     // Check if the trigger is ready
     if(!gpio_is_ready_dt(&trig))
