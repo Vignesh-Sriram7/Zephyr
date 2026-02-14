@@ -10,8 +10,8 @@
 #include "wifi.h"
 
 // WiFi settings
-#define WIFI_SSID "MySSID"
-#define WIFI_PSK "MyPassword"
+#define WIFI_SSID "MySSID"      // Enter the wifi username
+#define WIFI_PSK "MyPassword"   // Enter the wifi password
 
 #define MAX_TICKS 10000 // Threshold to move on from waiting for the reply ping of the ultrasonic sensor
 
@@ -22,25 +22,29 @@ uint32_t counter2=0;    // Counter for the end ping
 uint32_t start_time = 0;    // Timer start time    
 uint32_t stop_time = 0;     // Timer stop time
 uint32_t duration = 0;      // Total duration from sending the singal to getting it back
-uint64_t duration_us = 0;
+uint64_t duration_us = 0;   // Duration in micro seconds
 uint32_t pulse_ns = 0;      // Duty Cycle Pulse
-uint32_t distance_cm = 0;
+uint32_t distance_cm = 0;   // Total distance in cm
 int angle = 0;
-
 
 // Get devicetree configurations 
 static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(DT_ALIAS(motor_0));
 static const struct gpio_dt_spec trig = GPIO_DT_SPEC_GET(DT_ALIAS(hc_trig),gpios);
 static const struct gpio_dt_spec echo = GPIO_DT_SPEC_GET(DT_ALIAS(hc_echo),gpios);
 
+// Create a function for the clockwise rotation of the servo motor by passing the client socket
 int radar_clockwise(int client_sock){
 
     for(int angle = 0; angle<=180; angle+=5)
         {
             char buf[32];
 
+            // 0.5ms pulse represents the 0 degree position
+            // 2.5ms pulse represents the 180 degree position
+            // Since the difference is 2ms, divide it by 180 to get the steps per degree
             pulse_ns = 500000 + (angle * 2000000 / 180);
 
+            // Set the pulse in the pwm
             pwm_set_pulse_dt(&servo, pulse_ns);
             k_msleep(50);
 
@@ -56,7 +60,7 @@ int radar_clockwise(int client_sock){
                 if(counter>MAX_TICKS) // Condition to break the detection
                     break;
             }
-            start_time = k_cycle_get_32();  // Record the cycle time
+            start_time = k_cycle_get_32();  // Record the cycle time in ticks once the echo goes high
 
             // Check for the echo pin to go low
             counter2 = 0;
@@ -65,17 +69,18 @@ int radar_clockwise(int client_sock){
                 if(counter2>MAX_TICKS)
                     break;
             }
-            stop_time = k_cycle_get_32();
+            stop_time = k_cycle_get_32();   // Record the cycle time in ticks once the echo goes low
             
             // If the counter does not max out calculate the distance
             if(counter < MAX_TICKS && counter2 < MAX_TICKS)
             {
-                duration = stop_time - start_time;
-                duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
+                duration = stop_time - start_time;  // Gives the duration of the ticks from the time of pulse transmission and reception
+                duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;    // Converting ticks to microseconds -> ticks *1000000 / clock frequency
+                // Sound travels at 343 m/s and in microseconds 0.0343 cm/us so 34/(2*1000) where 2 is because the distance of the object is just half of the total to and fro distance travelled
                 distance_cm = (duration_us * 34) / 2000;
                 printk("Angle: %d, Distance: %u cm\n", angle, distance_cm);
-                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm);
-                int ret = zsock_send(client_sock, buf, strlen(buf), 0);
+                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm); // Add the sensor readings to the buffer
+                int ret = zsock_send(client_sock, buf, strlen(buf), 0); // Send it to the client socket
                 if (ret < 0) {
                     break;
                 }
@@ -87,6 +92,7 @@ int radar_clockwise(int client_sock){
         return 0; 
 }
 
+// Create a function for the clockwise rotation of the servo motor by passing the client socket
 int radar_aclockwise(int client_sock){
 
     for(int angle = 180; angle>=0; angle-=5)
@@ -97,7 +103,7 @@ int radar_aclockwise(int client_sock){
 
             pwm_set_pulse_dt(&servo, pulse_ns);
             k_msleep(50);
-            // HC-SR04 code
+            
             gpio_pin_set_dt(&trig, 1);
             k_busy_wait(10);
             gpio_pin_set_dt(&trig, 0);
@@ -143,11 +149,10 @@ int main(void)
 {
     struct sockaddr_in serv_addr;  // Defines the IPv4 internet address structure for the server to listen on
     
-    struct sockaddr_in client_addr;
+    struct sockaddr_in client_addr; // Used to store the IPv4 address information for a network connection, here the device visiting the website
 
     socklen_t client_addr_len = sizeof(client_addr);
 
-    
     int sock;
     int ret;
 
@@ -171,9 +176,7 @@ int main(void)
     // Configure the echo to output
     ret = gpio_pin_configure_dt(&echo, GPIO_INPUT);
     if(ret<0)
-        return 0;
-
-    
+        return 0;    
 
     // Initialize WiFi
     wifi_init();
@@ -188,11 +191,11 @@ int main(void)
     // Wait to receive an IP address (blocking)
     wifi_wait_for_ip_addr();
     
+    // server definition
     memset(&serv_addr, 0, sizeof(serv_addr));   // Clear memory to prevent garbage values
     serv_addr.sin_family = AF_INET;              // IPv4
-    serv_addr.sin_port = htons(80);        // htons -> converts the port number from host byte order to network byte order little endian to big endian
+    serv_addr.sin_port = htons(80);        // htons -> converts the port number from host byte order to network byte order little endian to big endian---> asks to listen in port 80
     serv_addr.sin_addr.s_addr = INADDR_ANY;    // Accept connection on any local network interface
-
 
     // Create a new socket
     sock = zsock_socket(AF_INET, SOCK_STREAM, 0);
@@ -201,13 +204,14 @@ int main(void)
         return 0;
     }
 
+    // Attaches the server socket to the specified address
     ret = zsock_bind(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if(ret < 0){
         printk("Error (%d): Could not bind the socket\r\n", errno);
         return 0;
     }
 
-    ret = zsock_listen(sock, 1);    // Puts the socket in listening mode with a queue size of 1
+    ret = zsock_listen(sock, 1);    // Puts the socket in listening mode with a queue size of 1. waits for the incoming message
     if (ret < 0) {
         printk("Error (%d): Could not listen to the socket\r\n", errno);
         return 0;
@@ -218,6 +222,7 @@ int main(void)
 
     while (1) {
 
+        // Writes the phone/device IP to the struct client_sock and creates client ids. each client id is tied to a client addr
         int client_sock = zsock_accept(sock, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_sock < 0) {
             printk("Error (%d): Could not connect to the browser\r\n", errno);
@@ -225,12 +230,14 @@ int main(void)
         }
         else
         {
+        // Sends the header to the specified id and address. multiple if there exists multiple IPs
         ret = zsock_send(client_sock, header, strlen(header), 0);
         if (ret < 0) {
             printk("Error (%d): Could not send request\r\n", errno);
             return 0;
         }
-
+        
+        // HTML code for a green radar space simulation
         char *html_top = "<html><body style='background:#000;color:#0f0;overflow:hidden'>"
                  "<canvas id='c'></canvas><script>"
                  "const v=document.getElementById('c'),x=v.getContext('2d');"
@@ -243,9 +250,9 @@ int main(void)
 
         zsock_send(client_sock, html_top, strlen(html_top), 0);
         
-        radar_clockwise(client_sock);
-        radar_aclockwise(client_sock);
-        zsock_close(client_sock);
+        radar_clockwise(client_sock);   // Run the clockwise function
+        radar_aclockwise(client_sock);  // Run the anticlockwise function
+        zsock_close(client_sock);       // Clsoe the socket
         }
     }
 }
