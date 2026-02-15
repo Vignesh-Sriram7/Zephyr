@@ -10,8 +10,8 @@
 #include "wifi.h"
 
 // WiFi settings
-#define WIFI_SSID "MySSID"      // Enter the wifi username
-#define WIFI_PSK "MyPassword"   // Enter the wifi password
+#define WIFI_SSID "Vodafone-0F19"      // Enter the wifi username
+#define WIFI_PSK "baxXcWaHLt9J4xj7"   // Enter the wifi password
 
 #define MAX_TICKS 10000 // Threshold to move on from waiting for the reply ping of the ultrasonic sensor
 
@@ -79,10 +79,11 @@ int radar_clockwise(int client_sock){
                 // Sound travels at 343 m/s and in microseconds 0.0343 cm/us so 34/(2*1000) where 2 is because the distance of the object is just half of the total to and fro distance travelled
                 distance_cm = (duration_us * 34) / 2000;
                 printk("Angle: %d, Distance: %u cm\n", angle, distance_cm);
-                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm); // Add the sensor readings to the buffer
+                snprintf(buf, sizeof(buf), "<script>d(%d,%u);</script>\n", angle, distance_cm); // Add the sensor readings to the buffer
                 int ret = zsock_send(client_sock, buf, strlen(buf), 0); // Send it to the client socket
                 if (ret < 0) {
-                    break;
+                    printk("Client disconnected during sweep.\n");
+                    return -1; // Critical: breaks the infinite loop in main
                 }
             }
             else
@@ -130,10 +131,11 @@ int radar_aclockwise(int client_sock){
                 duration_us = (uint64_t)duration * 1000000 / CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
                 distance_cm = (duration_us * 34) / 2000;
                 printk("Angle: %d, Distance: %u cm\n", angle, distance_cm);
-                snprintf(buf, sizeof(buf), "<script>d(%d,%u)</script>", angle, distance_cm);
+                snprintf(buf, sizeof(buf), "<script>d(%d,%u);</script>\n", angle, distance_cm);
                 int ret = zsock_send(client_sock, buf, strlen(buf), 0);
                 if (ret < 0) {
-                    break;
+                    printk("Client disconnected during sweep.\n");
+                    return -1; // Critical: breaks the infinite loop in main
                 }
             }
             else
@@ -156,7 +158,7 @@ int main(void)
     int sock;
     int ret;
 
-    char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+    char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
     
     // Check if the trigger is ready
     if(!gpio_is_ready_dt(&trig))
@@ -190,6 +192,7 @@ int main(void)
 
     // Wait to receive an IP address (blocking)
     wifi_wait_for_ip_addr();
+    
     
     // server definition
     memset(&serv_addr, 0, sizeof(serv_addr));   // Clear memory to prevent garbage values
@@ -225,34 +228,41 @@ int main(void)
         // Writes the phone/device IP to the struct client_sock and creates client ids. each client id is tied to a client addr
         int client_sock = zsock_accept(sock, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_sock < 0) {
-            printk("Error (%d): Could not connect to the browser\r\n", errno);
-            return 0;
+            continue;
         }
-        else
-        {
+        
+        char rx_buf[512]; 
+        zsock_recv(client_sock, rx_buf, sizeof(rx_buf), 0); // Consume the browser's GET request
+        printk("Browser connected! Sending radar...\n");
         // Sends the header to the specified id and address. multiple if there exists multiple IPs
         ret = zsock_send(client_sock, header, strlen(header), 0);
         if (ret < 0) {
             printk("Error (%d): Could not send request\r\n", errno);
-            return 0;
+            continue;
         }
         
         // HTML code for a green radar space simulation
-        char *html_top = "<html><body style='background:#000;color:#0f0;overflow:hidden'>"
+        char *html_top = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>"
+                 "<body style='background:#000;color:#0f0;margin:0;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden'>"
                  "<canvas id='c'></canvas><script>"
                  "const v=document.getElementById('c'),x=v.getContext('2d');"
-                 "v.width=v.height=600; x.translate(300,500);" // Center the radar
+                 "v.width=600;v.height=600;x.translate(300,590);" 
                  "function d(a,r){"
-                 "const rad=a*Math.PI/180,px=Math.cos(rad)*r*2,py=-Math.sin(rad)*r*2;"
-                 "x.fillStyle='rgba(0,20,0,0.05)';x.fillRect(-300,-500,600,600);" // Fade effect
-                 "x.strokeStyle='#0f0';x.beginPath();x.moveTo(0,0);x.lineTo(px,py);x.stroke();"
+                 "x.fillStyle='rgba(0,10,0,0.02)';x.fillRect(-300,-590,600,600);" // Fade
+                 "x.strokeStyle='#030';x.beginPath();x.arc(0,0,150,Math.PI,0);x.arc(0,0,300,Math.PI,0);x.arc(0,0,450,Math.PI,0);x.stroke();" // Rings
+                 "const rad=(a-180)*Math.PI/180,px=Math.cos(rad)*r*15,py=Math.sin(rad)*r*15;" // Scaled r*15
+                 "x.strokeStyle='#0f0';x.lineWidth=2;x.beginPath();x.moveTo(0,0);x.lineTo(px,py);x.stroke();"
                  "x.fillStyle='#fff';x.fillRect(px-2,py-2,4,4);}</script>";
 
         zsock_send(client_sock, html_top, strlen(html_top), 0);
         
-        radar_clockwise(client_sock);   // Run the clockwise function
-        radar_aclockwise(client_sock);  // Run the anticlockwise function
+        while (1) {
+        if (radar_clockwise(client_sock) < 0) break;
+        if (radar_aclockwise(client_sock) < 0) break;
+    }
+        char *html_bottom = "</body></html>";
+        zsock_send(client_sock, html_bottom, strlen(html_bottom), 0);
         zsock_close(client_sock);       // Clsoe the socket
-        }
+        
     }
 }
