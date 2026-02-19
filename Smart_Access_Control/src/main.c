@@ -5,12 +5,14 @@
 #include <zephyr/sys/time_units.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/settings/settings.h>
 
 #define VND_MAX_LEN 20
+static struct bt_le_adv_param adv_param;
 
 /////*Service and characteristics definition*/////
 
@@ -33,6 +35,8 @@ static const struct bt_uuid_128 vnd_enc_uuid = BT_UUID_INIT_128(
 static const struct bt_uuid_128 vnd_auth_uuid = BT_UUID_INIT_128(
 	BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2));
 
+
+
 // Actual memory storage in the RAM for the application
 // Holds the values that the client reads or writes
 // The incoming bluetooth data is saved in these arrays, which are initialized initially to vendor but change in the course of the program
@@ -52,6 +56,16 @@ BT_GATT_SERVICE_DEFINE(lock_svc,	// Defines the variable name to track this serv
 			       		   BT_GATT_CHRC_READ,	
 			       		   BT_GATT_PERM_READ_ENCRYPT,
 			               read_callback, NULL, vnd_value),); // Callback function to read 
+
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR))
+};
+
+static const struct bt_data sd[] = {
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_CUSTOM_SERVICE_VAL),
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
 /* Callback functions
 respective attr->user_data access the specific private read() or write() data storage array*/
 
@@ -80,4 +94,73 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 	value[offset + len] = 0;
 
 	return len;
+}
+
+
+/*Security and authentication*/
+
+// Security guard for the application
+// Tells the ESP32 what to do when a device tries to pair
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+    // This prints the random code to your terminal
+    printf("Passkey for %p: %06u\n", (void *)conn, passkey);
+}
+
+static struct bt_conn_auth_cb auth_cb_display = {
+	.passkey_display = auth_passkey_display,
+	.cancel = bt_conn_auth_cancel,
+};
+
+
+static void connected(struct bt_conn *conn, uint8_t err)
+{
+	if (err) {
+		printk("Connection failed, err 0x%02x %s\n", err, bt_hci_err_to_str(err));
+	} else {
+		printk("Connected\n");
+	}
+}
+
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
+}
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected = connected,
+	.disconnected = disconnected
+};
+
+static void bt_ready(void)
+{
+	int err;
+
+	printk("Bluetooth initialized\n");
+
+	if (IS_ENABLED(CONFIG_SETTINGS)) {
+		settings_load();
+	}
+
+	adv_param = *BT_LE_ADV_CONN_FAST_1;
+
+	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+
+	if (err) {
+		printk("Advertising failed to start (err %d)\n", err);
+	} else {
+		printk("Advertising successfully started\n");
+	}
+}
+
+int main(void){
+	int ret;
+
+	ret = bt_enable(NULL);
+	if (ret) {
+		printk("Bluetooth init failed (err %d)\n", ret);
+		return 0;
+	}
+	// Stops anyone from using the write_callback until paired
+	int bt_conn_auth_cb_register(auth_cb_display);
 }
