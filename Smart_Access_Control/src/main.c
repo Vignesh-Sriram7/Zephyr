@@ -4,12 +4,13 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/sys/time_units.h>
 #include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/byteorder.h>
-#include <zephyr/settings/settings.h>
 
 #define VND_MAX_LEN 20
 static struct bt_le_adv_param adv_param;
@@ -59,12 +60,12 @@ BT_GATT_SERVICE_DEFINE(lock_svc,	// Defines the variable name to track this serv
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR))
-};
+}; // Advertising data, to let the clients nearby know that the device is a LE looking for a connection
 
 static const struct bt_data sd[] = {
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_CUSTOM_SERVICE_VAL),
-	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
-};
+	BT_DATA(BT_DATA_NAME_SHORTENED, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+}; // Scan response which is sent as more onformation once the ad is received and information requested
 
 /* Callback functions
 respective attr->user_data access the specific private read() or write() data storage array*/
@@ -132,9 +133,24 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected
 };
 
+void pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	printk("Pairing completed. Rebooting in 5 seconds...\n");
+
+	k_sleep(K_SECONDS(5));
+}
+
+
+static struct bt_conn_auth_info_cb bt_conn_auth_info = {
+	.pairing_complete = pairing_complete
+};
+
 static void bt_ready(void)
 {
 	int err;
+	// Stops anyone from using the write_callback until paired
+	bt_conn_auth_cb_register(&auth_cb_display);
+	bt_conn_auth_info_cb_register(&bt_conn_auth_info);
 
 	printk("Bluetooth initialized\n");
 
@@ -156,11 +172,14 @@ static void bt_ready(void)
 int main(void){
 	int ret;
 
-	ret = bt_enable(NULL);
+	ret = bt_enable(bt_ready);
 	if (ret) {
 		printk("Bluetooth init failed (err %d)\n", ret);
 		return 0;
 	}
-	// Stops anyone from using the write_callback until paired
-	int bt_conn_auth_cb_register(auth_cb_display);
+	
+	while (1) {
+		k_sleep(K_FOREVER);
+	}
+	return 0;
 }
