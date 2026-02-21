@@ -15,6 +15,9 @@
 #define VND_MAX_LEN 20
 static struct bt_le_adv_param adv_param;
 
+/*Devicetree Configurations*/
+static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(DT_ALIAS(motor_0));
+
 /////*Service and characteristics definition*/////
 
 // Converts 128 Bit random string to a format esp32 understands
@@ -35,8 +38,6 @@ static const struct bt_uuid_128 vnd_enc_uuid = BT_UUID_INIT_128(
 // Vendor Authenticated UUID - Writing. The action characteristic
 static const struct bt_uuid_128 vnd_auth_uuid = BT_UUID_INIT_128(
 	BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef2));
-
-
 
 // Actual memory storage in the RAM for the application
 // Holds the values that the client reads or writes
@@ -180,7 +181,15 @@ static void bt_ready(int error)
 
 int main(void){
 	int ret;
+	int locked_pulse_ns = 2000000;
+	
+	// Check if the servo is ready
+    if(!pwm_is_ready_dt(&servo))
+        return 0;
 
+	pwm_set_pulse_dt(&servo, locked_pulse_ns);
+	k_msleep(500);
+	pwm_set_pulse_dt(&servo, 0);
 	ret = bt_enable(bt_ready);
 	if (ret) {
 		printk("Bluetooth init failed (err %d)\n", ret);
@@ -188,7 +197,7 @@ int main(void){
 	}
 
 	while (1) {
-		k_sleep(K_FOREVER);
+		k_sleep(100);
 	}
 	return 0;
 }
