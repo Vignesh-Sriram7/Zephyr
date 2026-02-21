@@ -107,12 +107,14 @@ static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
     printf("Passkey for %p: %06u\n", (void *)conn, passkey);
 }
 
+// Methods of Authentication
 static struct bt_conn_auth_cb auth_cb_display = {
 	.passkey_display = auth_passkey_display,
 	.cancel = bt_conn_auth_cancel,
 };
 
-
+/* Connection Callbacks*/
+// Triggered the moment the radio handshake is successful --> not authenticated
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	if (err) {
@@ -122,28 +124,34 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 }
 
+// When the client goes out of range or the app is closed
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
 }
 
+// Hooks the functions into the system --> callback structure for connection events
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected
 };
 
+// If the bonded is true it means that the client and the esp have exchanged the keys and stored it in the FLASH
+// When the client connects next time passkey is not neccessary
 void pairing_complete(struct bt_conn *conn, bool bonded)
 {
 	printk("Pairing completed. Rebooting in 5 seconds...\n");
 
-	k_sleep(K_SECONDS(5));
 }
 
-
+// Notification of the state
 static struct bt_conn_auth_info_cb bt_conn_auth_info = {
 	.pairing_complete = pairing_complete
 };
 
+/*Initializes the bluetooth module, 
+checks for the errors on hardware startup, 
+register the security rules and start advertising*/ 
 static void bt_ready(int error)
 {
 	if(error)
