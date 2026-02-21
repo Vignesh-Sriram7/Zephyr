@@ -11,9 +11,12 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/byteorder.h>
+#include <string.h>
 
 #define VND_MAX_LEN 20
 static struct bt_le_adv_param adv_param;
+int locked_pulse_ns = 2000000;
+int open_pulse_ns = 1000000;
 
 /*Devicetree Configurations*/
 static const struct pwm_dt_spec servo = PWM_DT_SPEC_GET(DT_ALIAS(motor_0));
@@ -80,7 +83,18 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 
 	memcpy(value + offset, buf, len);
 	value[offset + len] = 0;
-
+	if (strcmp(value, "OPEN")==0){
+		printk("Lock Opening\n");
+		pwm_set_pulse_dt(&servo, open_pulse_ns);
+		k_msleep(500);
+		pwm_set_pulse_dt(&servo, 0);
+	}
+	else if (strcmp(value, "CLOSE")==0){
+		printk("Lock Closing\n");
+		pwm_set_pulse_dt(&servo, locked_pulse_ns);
+		k_msleep(500);
+		pwm_set_pulse_dt(&servo, 0);
+		}
 	return len;
 }
 
@@ -181,7 +195,6 @@ static void bt_ready(int error)
 
 int main(void){
 	int ret;
-	int locked_pulse_ns = 2000000;
 	
 	// Check if the servo is ready
     if(!pwm_is_ready_dt(&servo))
@@ -197,7 +210,7 @@ int main(void){
 	}
 
 	while (1) {
-		k_sleep(100);
+		k_sleep(K_FOREVER);
 	}
 	return 0;
 }
