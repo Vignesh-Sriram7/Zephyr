@@ -41,6 +41,7 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 ---
 
 ## Project Structure
+```
 .
 ├── boards/
 │ └── esp32_wroom_devkitc.overlay # PWM & Pin control definitions
@@ -49,7 +50,7 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 ├── prj.conf # BLE, stack sizes, and NVS configs
 ├── CMakeLists.txt
 └── README.md
----
+```
 
 ## Devicetree Overview
 
@@ -130,13 +131,13 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 **Fix:**  
 Increase memory allocations in `prj.conf`:
 
-# Increase System Heap
-CONFIG_HEAP_MEM_POOL_SIZE=16384
+- Increase System Heap
+`CONFIG_HEAP_MEM_POOL_SIZE=16384`
 
-# Increase Stack Sizes
-CONFIG_MAIN_STACK_SIZE=4096
-CONFIG_BT_RX_STACK_SIZE=2048
+- Increase Stack Sizes
+`CONFIG_MAIN_STACK_SIZE=4096`
+`CONFIG_BT_RX_STACK_SIZE=2048`
 
-# Shrink Bluetooth Buffers to save RAM
-CONFIG_BT_BUF_ACL_RX_SIZE=76
-CONFIG_BT_BUF_ACL_TX_SIZE=76
+- Shrink Bluetooth Buffers to save RAM
+`CONFIG_BT_BUF_ACL_RX_SIZE=76`
+`CONFIG_BT_BUF_ACL_TX_SIZE=76`
