@@ -140,3 +140,35 @@ Increase memory allocations in `prj.conf`:
 - Shrink Bluetooth Buffers to save RAM
 `CONFIG_BT_BUF_ACL_RX_SIZE=76`
 `CONFIG_BT_BUF_ACL_TX_SIZE=76`
+## Expected Output
+
+### Serial Console
+- Device boots and initializes BLE  
+- Displays status messages (LOCKED / UNLOCKED)  
+- Shows pairing/bonding status when a device connects  
+
+<p align="center">
+  <img src="your_serial_output_image.png" width="400">
+</p>
+
+---
+
+### Mobile App (BLE Client)
+- Device appears as **Lock**  
+- Connect and send `OPEN` or `CLOSE` command  
+- Lock state updates accordingly  
+
+<p align="center">
+  <img src="your_mobile_app_image.png" width="300">
+</p>
+
+---
+
+### Physical Behavior
+- On boot → Servo moves to **LOCKED** position  
+- On `OPEN` command → Servo rotates to unlock  
+- On `CLOSE` command → Servo rotates back to lock  
+
+<p align="center">
+  <img src="your_hardware_setup_image.png" width="300">
+</p>
