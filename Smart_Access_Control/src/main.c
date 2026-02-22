@@ -131,7 +131,7 @@ BT_GATT_SERVICE_DEFINE(lock_svc,	// Defines the variable name to track this serv
                            NULL, write_callback, vnd_auth_value),
 	BT_GATT_CHARACTERISTIC(&vnd_enc_uuid.uuid,	// Folder for the read function of the client
 			       		   BT_GATT_CHRC_READ,	
-			       		   BT_GATT_PERM_READ_ENCRYPT,
+			       		   BT_GATT_PERM_READ,
 			               read_callback, NULL, vnd_value)); // Callback function to read 
 
 /*Security and authentication*/
