@@ -148,7 +148,7 @@ Increase memory allocations in `prj.conf`:
 - Shows pairing/bonding status when a device connects  
 
 <p align="center">
-  <img src="your_serial_output_image.png" width="400">
+  <img src="Screenshot 2026-02-22 205419.png" width="400">
 </p>
 
 ---
@@ -159,7 +159,7 @@ Increase memory allocations in `prj.conf`:
 - Lock state updates accordingly  
 
 <p align="center">
-  <img src="your_mobile_app_image.png" width="300">
+  <img src="Screenshot_20260222_233349_nRF Connect.jpg" width="300">
 </p>
 
 ---
@@ -170,5 +170,6 @@ Increase memory allocations in `prj.conf`:
 - On `CLOSE` command → Servo rotates back to lock  
 
 <p align="center">
-  <img src="your_hardware_setup_image.png" width="300">
+  <img src="Screenshot_20260223_000227_nRF Connect.jpg" width="300">
+  <img src="Screenshot_20260223_000246_nRF Connect.jpg" width="300">
 </p>
