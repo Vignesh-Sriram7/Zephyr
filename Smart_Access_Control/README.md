@@ -58,7 +58,7 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 - Servo Motor on LEDC channel 0 mapped to GPIO13  
 
 **Aliases**
-- motor-0 → Points to the PWM LEDC node  
+- `motor-0` → Points to the PWM LEDC node  
 
 ---
 
@@ -110,7 +110,6 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 - Keep BLE callbacks lightweight (avoid long delays inside them)  
 - Offload motor movement to a work queue or separate thread  
 
----
 
 ### Device Not Visible in Scan
 
