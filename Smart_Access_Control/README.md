@@ -164,11 +164,14 @@ Increase memory allocations in `prj.conf`:
 
 ---
 ### WEB UI
-- Connect the ESP32 and pair for successful connection
+- Click on connect and pair the ESP32
 - Click on the Lock to send the `OPEN` or `CLOSE` command
-- 
+  <p align="center">
+  <img src="Screenshot 2026-02-24 132501.png" width="1000">
+</p>
 <p align="center">
-  <img src="Screenshot_20260222_233349_nRF Connect.jpg" width="300">
+  <img src="Screenshot 2026-02-24 233148.png" width="1000">
+  <img src="Screenshot 2026-02-24 233220.png" width="1000">
 </p>
 
 ### Physical Behavior
@@ -180,3 +183,4 @@ Increase memory allocations in `prj.conf`:
   <img src="Screenshot_20260223_000227_nRF Connect.jpg" width="300">
   <img src="Screenshot_20260223_000246_nRF Connect.jpg" width="300">
 </p>
+`Source for animations spline`
