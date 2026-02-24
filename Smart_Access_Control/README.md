@@ -5,7 +5,6 @@ This project demonstrates how to use **Zephyr RTOS** on an **ESP32 DevKitC WROOM
 
 - Control a servo motor via PWM to physically lock/unlock a mechanism  
 - Implement a BLE (Bluetooth Low Energy) Server with custom GATT services  
-- Handle secure pairing using a 6-digit passkey and bonding  
 - Store bonding data in flash memory (NVS)  
 - Execute commands based on authenticated BLE write requests  
 
