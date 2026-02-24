@@ -163,6 +163,13 @@ Increase memory allocations in `prj.conf`:
 </p>
 
 ---
+### WEB UI
+- Connect the ESP32 and pair for successful connection
+- Click on the Lock to send the `OPEN` or `CLOSE` command
+- 
+<p align="center">
+  <img src="Screenshot_20260222_233349_nRF Connect.jpg" width="300">
+</p>
 
 ### Physical Behavior
 - On boot → Servo moves to **LOCKED** position  
