@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Lock | Pro Dashboard</title>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.60/build/spline-viewer.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.3/dist/dotlottie-wc.js" type="module"></script>
+    
+    <style>
+        body, html {
+            margin: 0; padding: 0; height: 100vh; width: 100vw;
+            font-family: 'Segoe UI', sans-serif; color: white;
+            overflow: hidden; background: #000;
+        }
+
+        .bg-3d {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+
+        .main-wrapper {
+            position: relative; z-index: 2; height: 100vh;
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 0 10%;
+        }
+
+        /* Hero Text Styling */
+        .hero-text {
+            max-width: 600px;
+        }
+
+        .hero-text h1 {
+            margin: 0;
+            font-weight: 900;
+            line-height: 0.9;
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 50%, #4facfe 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+            white-space: nowrap; 
+        }
+
+        .hero-text .top-line { font-size: 5rem; letter-spacing: 2px; }
+        .hero-text .bottom-line { font-size: 3.5rem; letter-spacing: -1px; }
+
+        @keyframes shimmer { to { background-position: 200% center; } }
+
+        .hero-text p {
+            font-size: 1rem;
+            margin-top: 15px;
+            opacity: 0.5;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .glass-card {
+            background: rgba(10, 10, 20, 0.4);
+            backdrop-filter: blur(30px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px; padding: 40px; text-align: center;
+            width: 380px; box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+        }
+
+        .lottie-container {
+            width: 100%; height: 300px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            margin: 10px 0;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            border: none; padding: 14px 40px; border-radius: 50px;
+            color: white; font-weight: 700; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .status-tag {
+            font-size: 10px; letter-spacing: 3px;
+            color: rgba(255,255,255,0.4); text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <spline-viewer class="bg-3d" url="https://prod.spline.design/0r7Umfe4ZeMa08ZL/scene.splinecode"></spline-viewer>
+
+    <div class="main-wrapper">
+        <div class="hero-text">
+            <h1 class="top-line">SMART</h1>
+            <h1 class="bottom-line">ACCESS-CONTROL</h1>
+            <p>BLE Smart Lock Protocol</p>
+        </div>
+
+        <div class="glass-card">
+            <button class="btn-connect" id="connectBtn" onclick="connectBLE()">CONNECT</button>
+            <div class="status-tag" id="status">ESP32 Offline</div>
+
+            <div class="lottie-container" onclick="toggleLock()">
+                <dotlottie-wc
+                    id="lockLottie"
+                    src="https://lottie.host/58253552-c4cf-4471-a877-dd4f1b8d7f38/hVAgYqaSeh.lottie" 
+                    autoplay
+                    loop>
+                </dotlottie-wc>
+            </div>
+
+            <h2 id="instruction" style="color: #4facfe; margin:0;">LOCKED</h2>
+            <p style="font-size: 11px; opacity: 0.5;">Click on the Lock to OPEN/CLOSE</p>
+        </div>
+    </div>
+
+    <script>
+        let lockCharacteristic;
+        let isLocked = true;
+
+        const URL_LOCKED_ANIM = "https://lottie.host/58253552-c4cf-4471-a877-dd4f1b8d7f38/hVAgYqaSeh.lottie";
+        const URL_UNLOCKED_ANIM = "https://lottie.host/edf966d0-960c-4191-8afd-1177d04017bb/fbgQuuIaXt.lottie";
+
+        async function connectBLE() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Lock' }],
+                    optionalServices: ['12345678-1234-5678-1234-56789abcdef0']
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('12345678-1234-5678-1234-56789abcdef0');
+                lockCharacteristic = await service.getCharacteristic('12345678-1234-5678-1234-56789abcdef2');
+                
+                document.getElementById('status').innerText = "Link Active";
+                document.getElementById('status').style.color = "#00f2fe";
+                document.getElementById('connectBtn').style.display = "none";
+            } catch (error) {
+                console.error(error);
+                document.getElementById('status').innerText = "Failed";
+            }
+        }
+
+        async function toggleLock() {
+            if (!lockCharacteristic) return alert("Connect Bluetooth First!");
+
+            const lottie = document.getElementById('lockLottie');
+            const label = document.getElementById('instruction');
+            const command = isLocked ? "OPEN" : "CLOSE";
+
+            try {
+                await lockCharacteristic.writeValueWithResponse(new TextEncoder().encode(command));
+                isLocked = !isLocked;
+                
+                if (isLocked) {
+                    lottie.setAttribute('src', URL_LOCKED_ANIM);
+                    label.innerText = "LOCKED";
+                    label.style.color = "#4facfe";
+                } else {
+                    lottie.setAttribute('src', URL_UNLOCKED_ANIM);
+                    label.innerText = "UNLOCKED";
+                    label.style.color = "#00ff88";
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('status').innerText = "Link Lost";
+            }
+        }
+    </script>
+</body>
+</html>
