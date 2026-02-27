@@ -242,18 +242,23 @@ int main(void)
         }
         
         // HTML code for a green radar space simulation
-        char *html_top = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>"
-                 "<body style='background:#000;color:#0f0;margin:0;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden'>"
-                 "<canvas id='c'></canvas><script>"
-                 "const v=document.getElementById('c'),x=v.getContext('2d');"
-                 "v.width=600;v.height=600;x.translate(300,590);" 
+        char *html_top = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                 "<style>body{background:#000;color:#0f0;margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:monospace}"
+                 "h1{margin:0;letter-spacing:2px;font-size:1.5rem}#dist{font-size:3rem;margin:10px 0;text-shadow:0 0 10px #0f0}</style></head>"
+                 "<body>"
+                 "<h1>ESP32 ULTRASONIC SENSOR</h1>"
+                 "<div id='dist'>0 CM</div>"
+                 "<canvas id='c'></canvas>"
+                 "<script>"
+                 "const v=document.getElementById('c'),x=v.getContext('2d'),out=document.getElementById('dist');"
+                 "v.width=600;v.height=400;x.translate(300,380);" // Adjusted height for text space
                  "function d(a,r){"
-                 "x.fillStyle='rgba(0,10,0,0.02)';x.fillRect(-300,-590,600,600);" // Fade
-                 "x.strokeStyle='#030';x.beginPath();x.arc(0,0,150,Math.PI,0);x.arc(0,0,300,Math.PI,0);x.arc(0,0,450,Math.PI,0);x.stroke();" // Rings
-                 "const rad=(a-180)*Math.PI/180,px=Math.cos(rad)*r*15,py=Math.sin(rad)*r*15;" // Scaled r*15
+                 "out.innerText=r+' CM';" // Update the text readout
+                 "x.fillStyle='rgba(0,10,0,0.02)';x.fillRect(-300,-380,600,400);" // Fade effect
+                 "x.strokeStyle='#030';x.beginPath();x.arc(0,0,100,Math.PI,0);x.arc(0,0,200,Math.PI,0);x.arc(0,0,300,Math.PI,0);x.stroke();" // Rings
+                 "const rad=(a-180)*Math.PI/180,px=Math.cos(rad)*r*10,py=Math.sin(rad)*r*10;" // Scaled r*10 for 400px height
                  "x.strokeStyle='#0f0';x.lineWidth=2;x.beginPath();x.moveTo(0,0);x.lineTo(px,py);x.stroke();"
                  "x.fillStyle='#fff';x.fillRect(px-2,py-2,4,4);}</script>";
-
         zsock_send(client_sock, html_top, strlen(html_top), 0);
         
         while (1) {
