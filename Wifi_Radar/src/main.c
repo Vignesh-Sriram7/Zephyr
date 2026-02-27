@@ -10,8 +10,8 @@
 #include "wifi.h"
 
 // WiFi settings
-#define WIFI_SSID "Vodafone-0F19"      // Enter the wifi username
-#define WIFI_PSK "baxXcWaHLt9J4xj7"   // Enter the wifi password
+#define WIFI_SSID ""      // Enter the wifi username
+#define WIFI_PSK ""   // Enter the wifi password
 
 #define MAX_TICKS 10000 // Threshold to move on from waiting for the reply ping of the ultrasonic sensor
 
