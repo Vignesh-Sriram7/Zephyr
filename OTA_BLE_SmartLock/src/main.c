@@ -12,6 +12,10 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/mgmt/mcumgr/mgmt/mgmt.h>
+#include <zephyr/mgmt/mcumgr/transport/smp_bt.h>
+#include <zephyr/mgmt/mcumgr/grp/img_mgmt/img_mgmt.h>
+#include <zephyr/mgmt/mcumgr/grp/os_mgmt/os_mgmt.h>
 
 #define VND_MAX_LEN 20
 // Configuration parameters for Bluetooth LE advertising
