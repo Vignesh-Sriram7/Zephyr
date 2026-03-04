@@ -1,6 +1,12 @@
 #include <zephyr/dt-bindings/pwm/pwm.h>
 
 / {
+    chosen {
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+
     aliases{
         motor-0=&motor_0;
     };
@@ -12,6 +18,41 @@
         };
     };
 
+};
+
+&flash0 {
+    /* DELETE the default partition table provided by the board files */
+    /delete-node/ partitions;
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 DT_SIZE_K(64)>;
+		};
+
+		slot0_partition: partition@10000 {
+			label = "image-0";
+			reg = <0x00010000 DT_SIZE_K(1856)>;
+		};
+
+		slot1_partition: partition@1E0000 {
+			label = "image-1";
+			reg = <0x001E0000 DT_SIZE_K(1856)>;
+		};
+
+		storage_partition: partition@3B0000 {
+			label = "storage";
+			reg = <0x003B0000 DT_SIZE_K(256)>;
+		};
+
+		scratch_partition: partition@3F0000 {
+			   label = "image-scratch";
+			   reg = <0x003F0000 DT_SIZE_K(64)>;
+		};
+	};
 };
 
 // Handles all the PWM tasks. Most flexible hardware timer on the ESP32; Primary ESP32 PWM peripheral
