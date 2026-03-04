@@ -203,6 +203,9 @@ static void bt_ready(int error)
 	bt_conn_auth_info_cb_register(&bt_conn_auth_info);
 
 	printk("Bluetooth initialized\n");
+	os_mgmt_register_group();      // Support for Reset/Echo
+    img_mgmt_register_group();    // Support for Firmware Upload
+    smp_bt_register();            // Tie MCUmgr to Bluetooth
 
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
 		settings_load();
@@ -231,6 +234,12 @@ int main(void){
 	pwm_set_pulse_dt(&servo, lock_pulse_ns);
     k_msleep(500);
     pwm_set_pulse_dt(&servo, 0);
+
+	if (!boot_is_img_confirmed()) {
+        int err = boot_write_img_confirmed();
+        if (err) { printk("Failed to confirm image: %d\n", err); } 
+        else { printk("New firmware version confirmed!\n"); }
+    }
 
 	ret = bt_enable(bt_ready);
 	if (ret) {
