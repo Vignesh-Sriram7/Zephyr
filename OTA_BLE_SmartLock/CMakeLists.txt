@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(OTA_BLE_SmartLock)
-zephyr_library_link_libraries_ifdef(CONFIG_MCUMGR bootutil_interface)
+
 set(ZEPHYR_MODULES
     ${CMAKE_SOURCE_DIR}/modules/zcbor
     ${CMAKE_SOURCE_DIR}/modules/bootloader/mcuboot
