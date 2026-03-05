@@ -194,33 +194,32 @@ static struct bt_conn_auth_info_cb bt_conn_auth_info = {
 /*Initializes the bluetooth module, 
 checks for the errors on hardware startup, 
 register the security rules and start advertising*/ 
-static void bt_ready(int error)
+static void bt_ready(int err)
 {
-	if(error)
-		return;
-	int err;
-	// Stops anyone from using the write_callback until paired
-	bt_conn_auth_cb_register(&auth_cb_display);
-	bt_conn_auth_info_cb_register(&bt_conn_auth_info);
+    if (err) {
+        printk("Bluetooth init failed (err %d)\n", err);
+        return;
+    }
 
-	printk("Bluetooth initialized\n");
-	os_mgmt_register_group();      // Support for Reset/Echo
-    img_mgmt_register_group();    // Support for Firmware Upload
-    smp_bt_register();            // Tie MCUmgr to Bluetooth
+    printk("Bluetooth initialized\n");
 
-	if (IS_ENABLED(CONFIG_SETTINGS)) {
-		settings_load();
-	}
-	// time to wait before each advertisement
-	adv_param = *BT_LE_ADV_CONN_FAST_1;
+    // Register authentication callbacks
+    bt_conn_auth_cb_register(&auth_cb_display);
+    bt_conn_auth_info_cb_register(&bt_conn_auth_info);
 
-	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), NULL, 0);
+    // Load settings (optional)
+    if (IS_ENABLED(CONFIG_SETTINGS)) {
+        settings_load();
+    }
 
-	if (err) {
-		printk("Advertising failed to start (err %d)\n", err);
-	} else {
-		printk("Advertising successfully started\n");
-	}
+    // Start advertising
+    adv_param = *BT_LE_ADV_CONN_FAST_1;
+    int adv_err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+    if (adv_err) {
+        printk("Advertising failed to start (err %d)\n", adv_err);
+    } else {
+        printk("Advertising successfully started\n");
+    }
 }
 
 int main(void){
