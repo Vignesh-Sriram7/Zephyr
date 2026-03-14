@@ -91,7 +91,7 @@ Initial setup and configuration for running **Zephyr on a custom STM32F303RE boa
 
 # Repository Structure
 
-
+```
 .
 ├── BLE_Find_Me
 ├── OTA_BLE_SmartLock
@@ -106,6 +106,7 @@ Initial setup and configuration for running **Zephyr on a custom STM32F303RE boa
 ├── led_pattern_binary
 └── stmf303r
 
+```
 
 Each folder contains an **independent Zephyr project** with its own:
 
@@ -115,4 +116,4 @@ Each folder contains an **independent Zephyr project** with its own:
 - `CMakeLists.txt`
 - `README.md`
 
----
+
