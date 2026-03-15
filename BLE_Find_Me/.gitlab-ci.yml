@@ -1,0 +1,20 @@
+image: zephyrprojectrtos/zephyr-build:v0.16.5
+
+stages:
+  - build
+
+compile_esp32_beacon:
+  stage: build
+  script:
+    # Initialize west and pull the ESP32 HAL/modules
+    - west init -l .
+    - west update
+    
+    # Your specific build command
+    - west build -p always -b esp32_devkitc_wroom/esp32/procpu -- -DDTC_OVERLAY_FILE=boards/esp32_devkitc_wroom.overlay
+    
+  artifacts:
+    # This saves the final file so you can download it from the GitLab UI
+    paths:
+      - build/zephyr/zephyr.bin
+    expire_in: 1 week
