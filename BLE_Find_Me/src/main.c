@@ -19,8 +19,7 @@
 // Uniquely identifies information without a central registration authority
 
 static const struct bt_data ad[] = {
-    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-    BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),  
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_CUSTOM_SERVICE_VAL),
 }; // Advertising data, to let the clients nearby know that the device is a LE looking for a connection.
 
@@ -42,8 +41,14 @@ static void bt_ready(int err)
 	printk("Bluetooth initialized\n");
 
 	/* Start advertising */
-	err = bt_le_adv_start(BT_LE_ADV_NCONN_IDENTITY, ad, ARRAY_SIZE(ad),
-			      sd, ARRAY_SIZE(sd));
+	// Define parameters: Non-connectable, but Scannable (so SD packet works)
+    struct bt_le_adv_param adv_param = BT_LE_ADV_PARAM_INIT(
+        BT_LE_ADV_OPT_SCANNABLE, 
+        BT_GAP_ADV_FAST_INT_MIN_1, 
+        BT_GAP_ADV_FAST_INT_MAX_1, 
+        NULL);
+
+    err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
 		return;
@@ -65,5 +70,5 @@ int main(void)
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
 	}
-	return 0;
+	k_sleep(K_FOREVER);
 }
