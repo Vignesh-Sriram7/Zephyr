@@ -1,0 +1,25 @@
+/ {
+    chosen {
+        zephyr,console = &uart0; /* Asks to use UART0 for printk logs. Allows the xplicit control of baud rate */
+    };
+
+    aliases {
+        led = &myled;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        myled: d16 {
+            gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+    
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-names = "default";
+};
