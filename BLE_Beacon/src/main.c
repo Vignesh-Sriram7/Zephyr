@@ -14,6 +14,7 @@
 // Configuration parameters for Bluetooth LE advertising
 static struct bt_le_adv_param adv_param;
 
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led), gpios);
 /////*Service and characteristics definition*/////
 
 // Converts 128 Bit random string to a format esp32 understands
@@ -86,3 +87,47 @@ BT_GATT_SERVICE_DEFINE(beacon_svc,	// Defines the variable name to track this se
 			       		   BT_GATT_CHRC_READ,	
 			       		   BT_GATT_PERM_READ,
 			               read_callback, NULL, vnd_value)); // Callback function to read 
+
+/* Define the IAS functions*/
+
+static void alert_stop(void)
+{
+    int ret;
+	printk("Alert stopped\n");
+    ret = gpio_pin_set_dt(&led, 0);
+    if (ret<0){
+        return;
+    }
+}
+
+static void alert_high_start(void)
+{
+    int ret;
+	printk("High alert started\n");
+    ret = gpio_pin_set_dt(&led, 1);
+    if (ret<0){
+        return;
+    }
+}
+
+BT_IAS_CB_DEFINE(ias_callbacks) = {
+	.no_alert = alert_stop,
+	.high_alert = alert_high_start,
+};
+
+
+int main(void)
+{
+	int ret;
+
+	// Make sure that the GPIO was initialized
+	if (!gpio_is_ready_dt(&led)) {
+		return;
+	}
+
+	// Set the GPIO as output
+	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+	if (ret < 0) {
+		return;
+	}
+}
