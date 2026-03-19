@@ -124,20 +124,40 @@ BT_IAS_CB_DEFINE(ias_callbacks) = {
 	.high_alert = alert_high_start,
 };
 
+
+// rssi: The value from the radio
+// measure_power: RSSI at 1 meter (usually -59)
+// n: Environmental factor (2.0 for air, 3.0 for a room)
+double calculate_distance(int8_t rssi) 
+{
+    if (rssi == 0) {
+        return -1.0; // Error or unknown
+    }
+
+    double measured_power = -59.0; 
+    double n = 3.0; 
+
+    // Formula: d = 10 ^ ((Measured Power - RSSI) / (10 * n))
+    return pow(10, (double)(measured_power - rssi) / (10 * n));
+}
+
+
 // Callbac function to measure the RSSI
 // Hardware measures the signal strength anf feeds to this function as int8
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 			 struct net_buf_simple *ad)
 {
     char addr_str[BT_ADDR_LE_STR_LEN];
-
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
 
-    // This prints every BLE device in range and its signal strength
-    printk("Device: %s | RSSI: %d dBm\n", addr_str, rssi);
+    double distance = calculate_distance(rssi);
 
-    /* Logic: If the signal is strong (phone is close), turn on LED */
-    if (rssi > -60) {
+    // Print the MAC, the Signal, and the estimated Meters
+    printk("Device: %s | RSSI: %d | Est. Distance: %.2f m\n", 
+            addr_str, rssi, distance);
+
+    // Proximity trigger (Turn on LED if closer than 1.5 meters)
+    if (distance > 0 && distance < 1.5) {
         gpio_pin_set_dt(&led, 1);
     } else {
         gpio_pin_set_dt(&led, 0);
