@@ -48,6 +48,16 @@ static const struct bt_data sd[] = {
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_CUSTOM_SERVICE_VAL),
 }; // Scan response which is sent as more onformation once the ad is received and information requested
 
+// type: Passive, asks the ESP32 to just over hear
+// interval: how often the ESP32 starts looking
+// window: how long is it listening during that time
+// options: defines the behaviour 
+static struct bt_le_scan_param scan_param = {
+    .type       = BT_LE_SCAN_TYPE_PASSIVE,
+    .options    = BT_LE_SCAN_OPT_NONE,
+    .interval   = BT_GAP_SCAN_FAST_INTERVAL,
+    .window     = BT_GAP_SCAN_FAST_WINDOW,
+};
 
 // Read callback function taht retrieves the data that is stored in the vnd_value and display it to the client
 static ssize_t read_callback(struct bt_conn *conn, const struct bt_gatt_attr *attr,
@@ -89,7 +99,6 @@ BT_GATT_SERVICE_DEFINE(beacon_svc,	// Defines the variable name to track this se
 			               read_callback, NULL, vnd_value)); // Callback function to read 
 
 /* Define the IAS functions*/
-
 static void alert_stop(void)
 {
     int ret;
@@ -115,19 +124,72 @@ BT_IAS_CB_DEFINE(ias_callbacks) = {
 	.high_alert = alert_high_start,
 };
 
+// Callbac function to measure the RSSI
+// Hardware measures the signal strength anf feeds to this function as int8
+static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
+			 struct net_buf_simple *ad)
+{
+    char addr_str[BT_ADDR_LE_STR_LEN];
+
+    bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
+
+    // This prints every BLE device in range and its signal strength
+    printk("Device: %s | RSSI: %d dBm\n", addr_str, rssi);
+
+    /* Logic: If the signal is strong (phone is close), turn on LED */
+    if (rssi > -60) {
+        gpio_pin_set_dt(&led, 1);
+    } else {
+        gpio_pin_set_dt(&led, 0);
+    }
+}
+
+// Define the function to initialize the bluetooth
+static void bt_ready(void)
+{
+	int err;
+
+	printk("Bluetooth initialized\n");
+
+	if (IS_ENABLED(CONFIG_SETTINGS)) {
+		settings_load();
+	}
+
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	if (err) {
+		printk("Advertising failed to start (err %d)\n", err);
+		return;
+	}
+
+	// Links the scan parameters and the callback function to measure RSSI
+	err = bt_le_scan_start(&scan_param, device_found);
+    if (err) {
+        printk("Scanning failed to start (err %d)\n", err);
+        return;
+    }
+
+	printk("Advertising successfully started\n");
+}
 
 int main(void)
 {
 	int ret;
+	int err;
+
+	err = bt_enable(bt_ready);
+	if (err) {
+		printk("Bluetooth init failed (err %d)\n", err);
+		return 0;
+	}
 
 	// Make sure that the GPIO was initialized
 	if (!gpio_is_ready_dt(&led)) {
-		return;
+		return 0;
 	}
 
 	// Set the GPIO as output
 	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
 	if (ret < 0) {
-		return;
+		return 0;
 	}
 }
