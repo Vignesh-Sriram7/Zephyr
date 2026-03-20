@@ -1,16 +1,20 @@
 / {
     chosen {
-        zephyr,console = &uart0; /* Asks to use UART0 for printk logs. Allows the xplicit control of baud rate */
+        zephyr,console = &uart0; /* Asks to use UART0 for printk logs. Allows the explicit control of baud rate */
     };
 
     aliases {
         led = &myled;
+        buzzer = &mybuzzer;
     };
 
     leds {
         compatible = "gpio-leds";
-        myled: d16 {
-            gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        myled: d26 {
+            gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+        };
+        mybuzzer: d27 {
+            gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
         };
     };
 
