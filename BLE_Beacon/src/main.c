@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/sys/printk.h>
@@ -15,6 +16,7 @@
 static struct bt_le_adv_param adv_param;
 
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led), gpios);
+static const struct gpio_dt_spec buzzer = GPIO_DT_SPEC_GET(DT_ALIAS(buzzer), gpios);
 /////*Service and characteristics definition*/////
 
 // Converts 128 Bit random string to a format esp32 understands
@@ -99,21 +101,23 @@ BT_GATT_SERVICE_DEFINE(beacon_svc,	// Defines the variable name to track this se
 			               read_callback, NULL, vnd_value)); // Callback function to read 
 
 /* Define the IAS functions*/
+// Helps find the device
 static void alert_stop(void)
 {
     int ret;
 	printk("Alert stopped\n");
-    ret = gpio_pin_set_dt(&led, 0);
+    ret = gpio_pin_set_dt(&buzzer, 0);
     if (ret<0){
         return;
     }
 }
 
+// When the device writes the alert comand the buzzer is triggered
 static void alert_high_start(void)
 {
     int ret;
 	printk("High alert started\n");
-    ret = gpio_pin_set_dt(&led, 1);
+    ret = gpio_pin_set_dt(&buzzer, 1);
     if (ret<0){
         return;
     }
@@ -124,7 +128,7 @@ BT_IAS_CB_DEFINE(ias_callbacks) = {
 	.high_alert = alert_high_start,
 };
 
-
+/* RSSI used to find the proximity of the device via the BLE signal*/
 // rssi: The value from the radio
 // measure_power: RSSI at 1 meter (usually -59)
 // n: Environmental factor (2.0 for air, 3.0 for a room)
@@ -196,14 +200,12 @@ int main(void)
 	int ret;
 	int err;
 
-	err = bt_enable(bt_ready);
-	if (err) {
-		printk("Bluetooth init failed (err %d)\n", err);
+	// Make sure that the GPIO was initialized
+	if (!gpio_is_ready_dt(&led)) {
 		return 0;
 	}
 
-	// Make sure that the GPIO was initialized
-	if (!gpio_is_ready_dt(&led)) {
+	if (!gpio_is_ready_dt(&buzzer)) {
 		return 0;
 	}
 
@@ -212,4 +214,20 @@ int main(void)
 	if (ret < 0) {
 		return 0;
 	}
+	ret = gpio_pin_configure_dt(&buzzer, GPIO_OUTPUT);
+	if (ret < 0) {
+		return 0;
+	}
+
+	
+	err = bt_enable(bt_ready);
+	if (err) {
+		printk("Bluetooth init failed (err %d)\n", err);
+		return 0;
+	}
+
+	while (1) {
+		k_sleep(K_FOREVER);
+	}
+	return 0;
 }
