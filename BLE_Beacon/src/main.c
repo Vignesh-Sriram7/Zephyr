@@ -15,6 +15,13 @@
 // Configuration parameters for Bluetooth LE advertising
 static struct bt_le_adv_param adv_param;
 
+// Current connection variable
+struct bt_conn *current_con;
+bool is_connected;
+char connected_addr_str[BT_ADDR_LE_STR_LEN] = {0};
+
+struct k_work_delayable rssi_work;
+
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led), gpios);
 static const struct gpio_dt_spec buzzer = GPIO_DT_SPEC_GET(DT_ALIAS(buzzer), gpios);
 /////*Service and characteristics definition*/////
@@ -154,6 +161,13 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
     char addr_str[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
 
+	// If we are connected, ignore everything except the connected phone
+    if (is_connected) {
+        if (strcmp(addr_str, connected_addr_str) != 0) {
+            return; // It's not our phone, stay quiet
+        }
+	}
+
     double distance = calculate_distance(rssi);
 
     // Print the MAC, the Signal, and the estimated Meters
@@ -168,11 +182,54 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
     }
 }
 
+
+/* Connection Callbacks*/
+// Triggered the moment the radio handshake is successful --> not authenticated
+static void connected(struct bt_conn *conn, uint8_t err)
+{
+	if (err) {
+		printk("Connection failed, err 0x%02x %s\n", err, bt_hci_err_to_str(err));
+	} else {
+		is_connected = true;
+		current_con = bt_conn_ref(conn);
+		char addr[BT_ADDR_LE_STR_LEN];
+		// bt_conn_get_dst --> gets the destination adddress of the connection
+		bt_addr_le_to_str(bt_conn_get_dst(conn), connected_addr_str, sizeof(addr));	// Convert the obtained address to readable string
+		printk("Connected to: %s\n Stopping Scan\n", connected_addr_str);
+		//bt_le_scan_stop();
+
+	}
+}
+
+// When the client goes out of range or the app is closed
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
+	is_connected = false;
+    
+    // Safety: Turn off LED and Buzzer when phone leaves
+    gpio_pin_set_dt(&led, 0);
+    gpio_pin_set_dt(&buzzer, 0);
+	memset(connected_addr_str, 0, sizeof(connected_addr_str));
+	if(current_con)
+	{
+		bt_conn_unref(current_con);
+		current_con=NULL;
+	}
+	bt_le_scan_start(&scan_param, device_found);
+}
+
+// Hooks the functions into the system --> callback structure for connection events
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected = connected,
+	.disconnected = disconnected
+};
+
+
 // Define the function to initialize the bluetooth
 static void bt_ready(int err)
 {
 	
-
 	printk("Bluetooth initialized\n");
 	adv_param = *BT_LE_ADV_CONN_FAST_1;
 	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
