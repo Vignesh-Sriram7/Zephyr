@@ -2,6 +2,8 @@
 #include <math.h>
 #include <zephyr/kernel.h>
 #include <string.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
@@ -20,6 +22,7 @@ struct bt_conn *current_con;
 bool is_connected;
 char connected_addr_str[BT_ADDR_LE_STR_LEN] = {0};
 
+// Adding a work scheduler for periodic update of the rssi
 struct k_work_delayable rssi_work;
 
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led), gpios);
@@ -100,11 +103,11 @@ BT_GATT_SERVICE_DEFINE(beacon_svc,	// Defines the variable name to track this se
     BT_GATT_PRIMARY_SERVICE(&vnd_uuid), // Defines the start of the service or the folder of this entire smart lock
     BT_GATT_CHARACTERISTIC(&vnd_auth_uuid.uuid, // Defines the function of the client, since the client writes to the server required write functions are added
                            BT_GATT_CHRC_WRITE,
-                           BT_GATT_PERM_WRITE,	// Let it remain as BT_GATT_PERM_WRITE and not BT_GATT_PERM_AUTH_WRITE 
+                           BT_GATT_PERM_WRITE_AUTHEN,	// Let it remain as BT_GATT_PERM_WRITE and not BT_GATT_PERM_AUTH_WRITE 
                            NULL, write_callback, vnd_auth_value),
 	BT_GATT_CHARACTERISTIC(&vnd_enc_uuid.uuid,	// Folder for the read function of the client
 			       		   BT_GATT_CHRC_READ,	
-			       		   BT_GATT_PERM_READ,
+			       		   BT_GATT_PERM_READ_AUTHEN,
 			               read_callback, NULL, vnd_value)); // Callback function to read 
 
 /* Define the IAS functions*/
@@ -120,9 +123,17 @@ static void alert_stop(void)
 }
 
 // When the device writes the alert comand the buzzer is triggered
+// Specifically requires the bonding of the device
 static void alert_high_start(void)
 {
     int ret;
+	struct bt_conn_info info;
+    bt_conn_get_info(current_con, &info);
+
+    if (info.security.level < BT_SECURITY_L3) {
+        printk("Unauthorized alert attempt blocked!\n");
+        return; 
+    }
 	printk("High alert started\n");
     ret = gpio_pin_set_dt(&buzzer, 1);
     if (ret<0){
@@ -136,6 +147,37 @@ BT_IAS_CB_DEFINE(ias_callbacks) = {
 };
 
 /* RSSI used to find the proximity of the device via the BLE signal*/
+// Read the connected device's RSSI 
+static void read_conn_rssi(uint16_t handle, int8_t *rssi)
+{
+	struct net_buf *buf, *rsp = NULL;
+	struct bt_hci_cp_read_rssi *cp;
+	struct bt_hci_rp_read_rssi *rp;
+
+	int err;
+
+	buf = bt_hci_cmd_create(BT_HCI_OP_READ_RSSI, sizeof(*cp));
+	if (!buf) {
+		printk("Unable to allocate command buffer\n");
+		return;
+	}
+
+	cp = net_buf_add(buf, sizeof(*cp));
+	cp->handle = sys_cpu_to_le16(handle);
+
+	err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_RSSI, buf, &rsp);
+	if (err) {
+		printk("Read RSSI err: %d\n", err);
+		return;
+	}
+
+	rp = (void *)rsp->data;
+	*rssi = rp->rssi;
+
+	net_buf_unref(rsp);
+}
+
+
 // rssi: The value from the radio
 // measure_power: RSSI at 1 meter (usually -59)
 // n: Environmental factor (2.0 for air, 3.0 for a room)
@@ -173,15 +215,34 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
     // Print the MAC, the Signal, and the estimated Meters
     printk("Device: %s | RSSI: %d | Est. Distance: %.2f m\n", 
             addr_str, rssi, distance);
-
-    // Proximity trigger (Turn on LED if closer than 1.5 meters)
-    if (distance > 0 && distance < 1.5) {
-        gpio_pin_set_dt(&led, 1);
-    } else {
-        gpio_pin_set_dt(&led, 0);
-    }
 }
 
+// Signal isolation and deterministic proximity heartbeat
+// Event driven and power efficient
+void connected_rssi_poller(struct k_work *work)
+{
+    if (!is_connected || !current_con) return;
+
+    uint16_t handle;
+    int8_t rssi = 0;
+
+    if (bt_hci_get_conn_handle(current_con, &handle) == 0) {
+        read_conn_rssi(handle, &rssi);
+
+        if (rssi != 0) {
+            double distance = calculate_distance(rssi);
+            printk("[CONNECTED] RSSI: %d | Distance: %.2f m\n", rssi, distance);
+
+            // Proximity trigger (Turn on LED if closer than 1.5 meters)
+            if (distance > 0 && distance < 1.5) {
+                gpio_pin_set_dt(&led, 1);
+            } else {
+                gpio_pin_set_dt(&led, 0);
+            }
+        }
+    }
+    k_work_reschedule(&rssi_work, K_MSEC(1000)); // Repeat every 1s
+}
 
 /* Connection Callbacks*/
 // Triggered the moment the radio handshake is successful --> not authenticated
@@ -196,8 +257,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		// bt_conn_get_dst --> gets the destination adddress of the connection
 		bt_addr_le_to_str(bt_conn_get_dst(conn), connected_addr_str, sizeof(addr));	// Convert the obtained address to readable string
 		printk("Connected to: %s\n Stopping Scan\n", connected_addr_str);
-		//bt_le_scan_stop();
-
+		bt_le_scan_stop();
+		k_work_schedule(&rssi_work, K_MSEC(100));
 	}
 }
 
@@ -206,7 +267,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
 	is_connected = false;
-    
+    k_work_cancel_delayable(&rssi_work);
     // Safety: Turn off LED and Buzzer when phone leaves
     gpio_pin_set_dt(&led, 0);
     gpio_pin_set_dt(&buzzer, 0);
@@ -225,12 +286,42 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected
 };
 
+/* Authorization functions*/
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	printk("Passkey for %s: %06u\n", addr, passkey);
+}
+
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	printk("Pairing cancelled: %s\n", addr);
+}
+
+static struct bt_conn_auth_cb auth_cb_display = {
+	.passkey_display = auth_passkey_display,
+	.cancel = auth_cancel,
+};
 
 // Define the function to initialize the bluetooth
 static void bt_ready(int err)
 {
 	
 	printk("Bluetooth initialized\n");
+	
+	// Store the bonding data of the device to remember for the power cycle fo the ESP32
+	if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+        settings_load();
+        printk("Settings loaded (Bonds restored)\n");
+    }
+
 	adv_param = *BT_LE_ADV_CONN_FAST_1;
 	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	if (err) {
@@ -271,13 +362,21 @@ int main(void)
 	if (ret < 0) {
 		return 0;
 	}
-
 	
+	// Initialize the work scheduler
+	k_work_init_delayable(&rssi_work, connected_rssi_poller);
+	
+	//bt_passkey_set(943507);	// If a fixed password is being used---> not secure generally
+
 	err = bt_enable(bt_ready);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
 		return 0;
 	}
+
+	// Register the authentication functions for randomness
+	bt_conn_auth_cb_register(&auth_cb_display);
+
 
 	while (1) {
 		k_sleep(K_FOREVER);
