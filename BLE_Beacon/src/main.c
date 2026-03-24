@@ -14,6 +14,13 @@
 #include <zephyr/bluetooth/services/ias.h>
 
 #define VND_MAX_LEN 20
+
+static double x_est = -60;	// Estimated RSSI
+static double p_error = 1.0;	// Error Covariance
+static double q_noise = 0.01;	// Process noise
+static double r_noise = 2.0;	// Measurement noise
+static double k_gain;	// Kalman gain
+
 // Configuration parameters for Bluetooth LE advertising
 static struct bt_le_adv_param adv_param;
 
@@ -178,10 +185,25 @@ static void read_conn_rssi(uint16_t handle, int8_t *rssi)
 }
 
 
+double kalman_filter(int8_t raw_rssi)
+{
+	// Since the time has passed uncertain of the old position
+	p_error = p_error + q_noise;
+	// Trust factor --> ratio between uncertainity p_error and the radio's nosie r_error
+	k_gain = (p_error/(p_error+r_noise));
+	// Take the old estimate and update with kalman gain
+	x_est = x_est + k_gain*(raw_rssi - x_est);
+	//Update the uncertainity
+	p_error = (1-k_gain)*p_error;
+	// return the filtered value
+	return x_est;
+
+}
+
 // rssi: The value from the radio
 // measure_power: RSSI at 1 meter (usually -59)
 // n: Environmental factor (2.0 for air, 3.0 for a room)
-double calculate_distance(int8_t rssi) 
+double calculate_distance(double rssi) 
 {
     if (rssi == 0) {
         return -1.0; // Error or unknown
@@ -230,7 +252,8 @@ void connected_rssi_poller(struct k_work *work)
         read_conn_rssi(handle, &rssi);
 
         if (rssi != 0) {
-            double distance = calculate_distance(rssi);
+			double k_rssi = kalman_filter(rssi);
+            double distance = calculate_distance(k_rssi);
             printk("[CONNECTED] RSSI: %d | Distance: %.2f m\n", rssi, distance);
 
             // Proximity trigger (Turn on LED if closer than 1.5 meters)
