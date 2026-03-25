@@ -6,6 +6,7 @@
     aliases {
         led = &myled;
         buzzer = &mybuzzer;
+        watchdog0 = &wdt0;
     };
 
     leds {
@@ -19,6 +20,10 @@
     };
 
     
+};
+
+&wdt0{
+    status = "okay";
 };
 
 &uart0 {
