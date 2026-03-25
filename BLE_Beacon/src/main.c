@@ -6,6 +6,7 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/watchdog.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/conn.h>
@@ -32,8 +33,12 @@ char connected_addr_str[BT_ADDR_LE_STR_LEN] = {0};
 // Adding a work scheduler for periodic update of the rssi
 struct k_work_delayable rssi_work;
 
+static int wdt_channel_id; // Declare the unique channel id variable for wdt to access in other functions
+
+// Device initialization (LED, Buzzer, Watchdog timer)
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led), gpios);
 static const struct gpio_dt_spec buzzer = GPIO_DT_SPEC_GET(DT_ALIAS(buzzer), gpios);
+static const struct device *const wdt = DEVICE_DT_GET(DT_ALIAS(watchdog0));
 /////*Service and characteristics definition*/////
 
 // Converts 128 Bit random string to a format esp32 understands
@@ -242,7 +247,9 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 // Signal isolation and deterministic proximity heartbeat
 // Event driven and power efficient
 void connected_rssi_poller(struct k_work *work)
-{
+{	
+	// Feed the watchdog to prove that the bluetooth stack is alive. If not or thread is stuck device will restart
+	wdt_feed(wdt, wdt_channel_id);
     if (!is_connected || !current_con) return;
 
     uint16_t handle;
@@ -300,6 +307,9 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		bt_conn_unref(current_con);
 		current_con=NULL;
 	}
+	// Restart the advertisement broadcasting after disconnection
+	bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	// Restart the RSSI scan for all available devices
 	bt_le_scan_start(&scan_param, device_found);
 }
 
@@ -369,13 +379,28 @@ int main(void)
 
 	// Make sure that the GPIO was initialized
 	if (!gpio_is_ready_dt(&led)) {
+		printk("LED not ready\n");
 		return 0;
 	}
 
 	if (!gpio_is_ready_dt(&buzzer)) {
+		printk("Buzzer not ready\n");
 		return 0;
 	}
 
+	if(!device_is_ready(wdt))
+	{
+		printk("%s: device not ready\n", wdt->name);
+		return 0;
+	}
+
+	// Watchdog timer configuration- Define the wdt behaviour
+	struct wdt_timeout_cfg wdt_config = {
+		.window.min = 0U,
+		.window.max = 10000U, // 
+		.callback = NULL,
+		.flags = WDT_FLAG_RESET_SOC,
+	};
 	// Set the GPIO as output
 	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
 	if (ret < 0) {
@@ -390,7 +415,20 @@ int main(void)
 	k_work_init_delayable(&rssi_work, connected_rssi_poller);
 	
 	//bt_passkey_set(943507);	// If a fixed password is being used---> not secure generally
+	
+	// Install the timeout configuration and get a Channel ID
+	wdt_channel_id = wdt_install_timeout(wdt, &wdt_config);
+	if (wdt_channel_id < 0) {
+		printk("Watchdog install error\n");
+		return 0;
+	}
 
+	// Start the hardware timer
+	err = wdt_setup(wdt, WDT_OPT_PAUSE_IN_SLEEP);
+	if (err < 0) {
+		printk("Watchdog setup error\n");
+		return 0;
+	}
 	err = bt_enable(bt_ready);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
@@ -402,7 +440,9 @@ int main(void)
 
 
 	while (1) {
-		k_sleep(K_FOREVER);
+		// Feed the watchdog during idle/scanning periods
+		wdt_feed(wdt, wdt_channel_id); // Keeps it alive while waiting for connection
+		k_sleep(K_MSEC(2000));
 	}
 	return 0;
 }
