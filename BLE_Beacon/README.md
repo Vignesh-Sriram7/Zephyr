@@ -77,7 +77,7 @@ Zephyr RTOS
 ESP32 (Xtensa Dual-Core)
 
 **Language**  
-C (C11)
+C 
 
 **Peripherals**
 - BLE Radio
