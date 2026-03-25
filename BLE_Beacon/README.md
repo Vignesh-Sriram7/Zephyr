@@ -6,7 +6,7 @@ Built on **Zephyr RTOS** for the **ESP32**, this project combines **real-time si
 
 ---
 
-# 🚀 Key Technical Features
+# Key Technical Features
 
 ## 1. Discrete Kalman Filter (Signal Integrity)
 
