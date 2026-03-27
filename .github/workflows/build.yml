@@ -22,7 +22,7 @@ jobs:
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
-          sdk-version: 0.16.5
+          sdk-version: 0.17
           modules: |
             hal_espressif
 
