@@ -27,26 +27,17 @@ jobs:
           sdk-version: 0.17.0
           # We leave toolchains EMPTY to let the action finish successfully
 
-      - name: Manual Toolchain Install
+      - name: Install ESP32 (xtensa) Toolchain
         run: |
-          # Find the SDK setup script anywhere in the workspace
-          SDK_SETUP=$(find $GITHUB_WORKSPACE -name "setup.sh" | grep "zephyr-sdk")
-          SDK_DIR=$(dirname $SDK_SETUP)
-          
-          echo "Found SDK at: $SDK_DIR"
-          
-          # Run the installer for the ESP32 compiler
-          $SDK_SETUP -t xtensa-espressif-elf -c
-          
-          # Save the path for the next step
-          echo "ZEPHYR_SDK_INSTALL_DIR=$SDK_DIR" >> $GITHUB_ENV
+          # Download prebuilt Zephyr-supported xtensa toolchain
+          wget https://dl.espressif.com/dl/esp-idf/esp32/xtensa-esp32-elf-linux64-1.80.0.tar.gz
+          tar -xzf xtensa-esp32-elf-linux64-1.80.0.tar.gz -C $HOME
+          echo "$HOME/xtensa-esp32-elf/bin" >> $GITHUB_PATH
+          echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
 
       - name: Build BLE Beacon
         run: |
-          # The path was saved to GITHUB_ENV in the previous step
-          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          
-          west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
+          west build -p always -b esp32 app/BLE_Beacon
           
       - name: Upload Flashable Binary
         uses: actions/upload-artifact@v4
