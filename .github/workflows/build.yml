@@ -24,14 +24,11 @@ jobs:
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
-          toolchains: xtensa-espressif-elf      # ESP32 toolchain
-          sdk-version: 1.0.1                     # Match your Zephyr SDK version
-          modules: |
-            hal_espressif
-
+          sdk-version: 1.0.1  # matches Zephyr's expected SDK
+          modules: hal_espressif
+      
       - name: Build BLE Beacon
-        run: |
-          west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
+        run: west build -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
       - name: Upload Flashable Binary
         uses: actions/upload-artifact@v4
