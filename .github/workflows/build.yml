@@ -1,16 +1,19 @@
 name: Build ESP32 BLE Beacon
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          path: app  # puts repo contents into 'app' folder
+          path: app
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,18 +24,10 @@ jobs:
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
-          sdk-version: 1.0.1   # match installed SDK version
+          toolchains: xtensa-espressif-elf      # ESP32 toolchain
+          sdk-version: 1.0.1                     # Match your Zephyr SDK version
           modules: |
             hal_espressif
-
-      - name: Install Xtensa Toolchain for ESP32
-        run: |
-          $HOME/zephyr-sdk/setup.sh -t xtensa-espressif-elf -c
-
-      - name: Set Zephyr SDK Environment
-        run: |
-          echo "ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk" >> $GITHUB_ENV
-          echo "ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> $GITHUB_ENV
 
       - name: Build BLE Beacon
         run: |
