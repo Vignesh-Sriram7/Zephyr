@@ -23,12 +23,8 @@ jobs:
         with:
           app-path: app
           sdk-version: 0.16.5
-          
-      - name: Install ESP32 Toolchain
-        run: |
-          west espressif install
-          west espressif export
-
+          modules: |
+            hal_espressif
 
       - name: Build BLE Beacon
         run: |
