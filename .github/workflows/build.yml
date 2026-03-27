@@ -23,6 +23,7 @@ jobs:
         with:
           app-path: app
           toolchains: xtensa-espressif-elf
+          sdk-version: 0.16.5
 
       - name: Build BLE Beacon
         run: |
