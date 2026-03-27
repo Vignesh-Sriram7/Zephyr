@@ -51,7 +51,7 @@ jobs:
         run: |
           export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk-0.17.0
           export ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp
-          west build -p always -b esp32 app/BLE_Beacon
+          west build -p always -b esp32_devkitc app/BLE_Beacon
           
       - name: Upload Flashable Binary
         uses: actions/upload-artifact@v4
