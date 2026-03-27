@@ -10,32 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          path: app
 
-      # 2️⃣ Set up Python for Zephyr/west
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 3️⃣ Install Zephyr base (without toolchains)
-      - name: Setup Zephyr Base
+      - name: Setup Zephyr Base (No Toolchains here)
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
           sdk-version: 0.17.0
-          toolchains: ''  # skip installing Zephyr SDK toolchains
-
-      # 4️⃣ Cache prebuilt Xtensa toolchain for faster builds
-      - name: Cache ESP32 Toolchain
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/.xtensa-esp32-elf
-          key: esp32-toolchain-v12-{{ runner.os }}
-          restore-keys: |
-            esp32-toolchain-v12-
+          # We leave toolchains EMPTY to let the action finish successfully
 
       - name: Install ESP32 (xtensa) Toolchain
         run: |
@@ -56,21 +46,17 @@ jobs:
           
           # Tell Zephyr to use ESP32 variant
           echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
-          
-      # 6️⃣ Set environment for Zephyr to find toolchain
-      - name: Set ESP32 Toolchain Environment
-        run: |
-          echo "${GITHUB_WORKSPACE}/.xtensa-esp32-elf/bin" >> $GITHUB_PATH
-          echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
 
-      # 7️⃣ Build the BLE Beacon
       - name: Build BLE Beacon
         run: |
-          west build -p always -b esp32_devkitc/esp32/propcu app/BLE_Beacon
-
-      # 8️⃣ Upload flashable binaries
+          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk-0.17.0
+          export ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp
+          west build -p always -b esp32 app/BLE_Beacon
+          
       - name: Upload Flashable Binary
         uses: actions/upload-artifact@v4
         with:
           name: BLE-Beacon-Firmware
-          path: build/zephyr/zephyr.bin
+          path: |
+            build/zephyr/zephyr.bin
+            build/zephyr/merged.bin
