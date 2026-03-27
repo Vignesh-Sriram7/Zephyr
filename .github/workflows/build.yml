@@ -21,7 +21,7 @@ jobs:
       - name: Setup Zephyr Base (No Toolchains here)
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
-          app-path: app
+          app-path: BLE_Beacon
           sdk-version: 0.17.0
           zephyr-version: v3.7.0
           # We leave toolchains EMPTY to let the action finish successfully
