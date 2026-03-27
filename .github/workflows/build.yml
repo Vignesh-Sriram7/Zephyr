@@ -10,8 +10,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # This puts your 'zephyr_repo' contents into a folder named 'app'
-          path: app 
+          path: app  # puts repo contents into 'app' folder
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,19 +21,21 @@ jobs:
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
-          sdk-version: 0.16.5
+          sdk-version: 1.0.1   # match installed SDK version
           modules: |
             hal_espressif
 
-      - name: Install Xtensa Toolchain Manually
+      - name: Install Xtensa Toolchain for ESP32
         run: |
-          # The SDK is installed by the action into the 'zephyr-sdk' folder
-          # We run the official setup script to specifically grab ESP32 support
-          /home/runner/work/Zephyr/Zephyr/zephyr-sdk/setup.sh -t xtensa-espressif-elf -c
+          $HOME/zephyr-sdk/setup.sh -t xtensa-espressif-elf -c
+
+      - name: Set Zephyr SDK Environment
+        run: |
+          echo "ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk" >> $GITHUB_ENV
+          echo "ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> $GITHUB_ENV
 
       - name: Build BLE Beacon
         run: |
-          export ZEPHYR_SDK_INSTALL_DIR=/home/runner/work/Zephyr/Zephyr/zephyr-sdk
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
       - name: Upload Flashable Binary
