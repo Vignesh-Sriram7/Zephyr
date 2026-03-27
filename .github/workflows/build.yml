@@ -26,10 +26,15 @@ jobs:
           modules: |
             hal_espressif
 
+      - name: Install Xtensa Toolchain Manually
+        run: |
+          # The SDK is installed by the action into the 'zephyr-sdk' folder
+          # We run the official setup script to specifically grab ESP32 support
+          /home/runner/work/Zephyr/Zephyr/zephyr-sdk/setup.sh -t xtensa-espressif-elf -c
+
       - name: Build BLE Beacon
         run: |
-          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk
+          export ZEPHYR_SDK_INSTALL_DIR=/home/runner/work/Zephyr/Zephyr/zephyr-sdk
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
       - name: Upload Flashable Binary
