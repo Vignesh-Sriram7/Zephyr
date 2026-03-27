@@ -10,51 +10,65 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          path: app
 
-      - name: Set up Python
+      # 2️⃣ Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Setup Zephyr Base (No Toolchains here)
+      # 3️⃣ Install Zephyr build dependencies
+      - name: Install Zephyr Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git cmake ninja-build gperf ccache dfu-util \
+            device-tree-compiler python3-pip python3-setuptools python3-wheel
+
+      # 4️⃣ Setup Zephyr Base (stable release)
+      - name: Setup Zephyr Base
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
           sdk-version: 0.17.0
-          # We leave toolchains EMPTY to let the action finish successfully
+          zephyr-version: v4.4.0   # stable Zephyr release
+          toolchains: ''           # skip installing default toolchains
 
-      - name: Install ESP32 (xtensa) Toolchain
+      # 5️⃣ Cache ESP32 Toolchain for faster CI
+      - name: Cache ESP32 Toolchain
+        uses: actions/cache@v3
+        id: cache-toolchain
+        with:
+          path: $HOME/xtensa-esp32-elf
+          key: xtensa-esp32-elf-1.80.0-linux-${{ runner.os }}
+
+      # 6️⃣ Install ESP32 Xtensa Toolchain (if not cached)
+      - name: Install ESP32 Toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         run: |
           TOOLCHAIN_URL="https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz"
           TOOLCHAIN_SHA="4d2e02ef47f1a93a4dcfdbaecd486adfaab4c0e26deea2c18d6385527f39f864"
-          
-          # Download
+
           wget $TOOLCHAIN_URL -O xtensa-esp32-elf.tar.xz
-          
-          # Verify SHA256
           echo "$TOOLCHAIN_SHA  xtensa-esp32-elf.tar.xz" | sha256sum -c -
-          
-          # Extract to HOME
           tar -xJf xtensa-esp32-elf.tar.xz -C $HOME
-          
-          # Add toolchain to PATH
+
+      # 7️⃣ Set Environment Variables for Zephyr
+      - name: Setup Environment
+        run: |
           echo "$HOME/xtensa-esp32-elf/bin" >> $GITHUB_PATH
-          
-          # Tell Zephyr to use ESP32 variant
           echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
 
+      # 8️⃣ Build BLE Beacon
       - name: Build BLE Beacon
         run: |
-          west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
-          
+          west build -p always -b esp32_devkitc app/BLE_Beacon
+
+      # 9️⃣ Upload Firmware Binary
       - name: Upload Flashable Binary
         uses: actions/upload-artifact@v4
         with:
           name: BLE-Beacon-Firmware
-          path: |
-            build/zephyr/zephyr.bin
-            build/zephyr/merged.bin
+          path: build/zephyr/zephyr.bin
