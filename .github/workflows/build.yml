@@ -29,10 +29,22 @@ jobs:
 
       - name: Install ESP32 (xtensa) Toolchain
         run: |
-          # Download prebuilt Zephyr-supported xtensa toolchain
-          wget https://dl.espressif.com/dl/esp-idf/esp32/xtensa-esp32-elf-linux64-1.80.0.tar.gz
-          tar -xzf xtensa-esp32-elf-linux64-1.80.0.tar.gz -C $HOME
+          TOOLCHAIN_URL="https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz"
+          TOOLCHAIN_SHA="4d2e02ef47f1a93a4dcfdbaecd486adfaab4c0e26deea2c18d6385527f39f864"
+          
+          # Download
+          wget $TOOLCHAIN_URL -O xtensa-esp32-elf.tar.xz
+          
+          # Verify SHA256
+          echo "$TOOLCHAIN_SHA  xtensa-esp32-elf.tar.xz" | sha256sum -c -
+          
+          # Extract to HOME
+          tar -xJf xtensa-esp32-elf.tar.xz -C $HOME
+          
+          # Add toolchain to PATH
           echo "$HOME/xtensa-esp32-elf/bin" >> $GITHUB_PATH
+          
+          # Tell Zephyr to use ESP32 variant
           echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
 
       - name: Build BLE Beacon
