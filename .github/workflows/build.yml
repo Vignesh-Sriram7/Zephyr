@@ -1,0 +1,39 @@
+name: Build ESP32 BLE Beacon
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # This puts your 'zephyr_repo' contents into a folder named 'app'
+          path: app 
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Zephyr Project
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: app
+          toolchains: xtensa-espressif-elf
+
+      - name: Build BLE Beacon
+        run: |
+          # We point to the sub-folder: app/BLE_Beacon
+          # Because your overlay is in 'boards/', Zephyr finds it automatically!
+          west build -p always -b esp32_devkitc_wroom/esp32/procpu app/BLE_Beacon
+
+      - name: Upload Flashable Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: BLE-Beacon-Firmware
+          path: |
+            build/zephyr/zephyr.bin
+            build/zephyr/merged.bin
