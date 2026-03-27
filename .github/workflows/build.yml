@@ -25,6 +25,7 @@ jobs:
         with:
           app-path: app
           sdk-version: 0.17.0
+          zephyr-version: v3.7.0
           # We leave toolchains EMPTY to let the action finish successfully
 
       - name: Install ESP32 (xtensa) Toolchain
