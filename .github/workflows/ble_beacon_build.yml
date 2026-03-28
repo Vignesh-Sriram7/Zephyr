@@ -5,10 +5,16 @@ on:
     branches:
       - main
       - master
+    paths:
+      - 'BLE_Beacon/**'
+      - '.github/workflows/build.yml'
   pull_request:
     branches:
       - main
       - master
+    paths:
+      - 'BLE_Beacon/**'
+      - '.github/workflows/build.yml'  
   workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
