@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          path: app
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,7 +23,7 @@ jobs:
       - name: Setup Zephyr Base (No Toolchains here)
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
-          app-path: BLE_Beacon
+          app-path: path
           sdk-version: 0.17.0
           zephyr-version: v3.7.0
           # We leave toolchains EMPTY to let the action finish successfully
