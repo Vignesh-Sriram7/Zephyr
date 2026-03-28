@@ -1,62 +1,69 @@
-name: Build ESP32 BLE Beacon
+name: Build Zephyr BLE_Beacon (ESP32)
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - master
   pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build BLE_Beacon for esp32_devkitc_wroom
+    runs-on: ubuntu-22.04
+
     container:
-      image: ghcr.io/zephyrproject-rtos/zephyr-build:main
-      options: --user root
+      image: ghcr.io/zephyrproject-rtos/ci:v0.27.4
+
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
 
     steps:
-      # 1️⃣ Checkout repo
+      # ------------------------------------------------------------------ #
+      # 1. Checkout your application repo
+      # ------------------------------------------------------------------ #
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          path: app
+          path: Zephyr   # checked out into a subfolder so west can manage the workspace
 
-      # 2️⃣ Cache Zephyr SDK
-      - name: Cache Zephyr SDK
-        uses: actions/cache@v3
-        with:
-          path: /opt/zephyr-sdk
-          key: zephyr-sdk-0.15.2
-          restore-keys: |
-            zephyr-sdk-
-
-      # 3️⃣ Install Zephyr SDK if not cached
-      - name: Install Zephyr SDK
-        if: steps.cache.outputs.cache-hit != 'true'
+      # ------------------------------------------------------------------ #
+      # 2. Set up the west workspace using your west.yml manifest
+      # ------------------------------------------------------------------ #
+      - name: Initialize west workspace
         run: |
-          ZEPHYR_SDK_VERSION=0.15.2
-          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v$ZEPHYR_SDK_VERSION/zephyr-sdk-$ZEPHYR_SDK_VERSION-linux-x86_64-setup.run
-          chmod +x zephyr-sdk-$ZEPHYR_SDK_VERSION-linux-x86_64-setup.run
-          ./zephyr-sdk-$ZEPHYR_SDK_VERSION-linux-x86_64-setup.run -- -d /opt/zephyr-sdk
+          west init -l Zephyr
+          west update --narrow --fetch-opt=--depth=1
 
-      # 4️⃣ Initialize Zephyr workspace
-      - name: Initialize West workspace
+      # ------------------------------------------------------------------ #
+      # 3. Export Zephyr CMake package so the build system can find it
+      # ------------------------------------------------------------------ #
+      - name: Export Zephyr CMake package
         run: |
-          west init -l app
-          west update
+          west zephyr-export
 
-      # 5️⃣ Set environment variables for Zephyr
-      - name: Set Zephyr environment
+      # ------------------------------------------------------------------ #
+      # 4. Build the application
+      # ------------------------------------------------------------------ #
+      - name: Build BLE_Beacon
         run: |
-          echo "ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> $GITHUB_ENV
-          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk" >> $GITHUB_ENV
+          west build \
+            --pristine \
+            --board esp32_devkitc_wroom/esp32/procpu \
+            Zephyr/BLE_Beacon \
+            -- \
+            -DCONFIG_BT=y
 
-      # 6️⃣ Build the BLE Beacon app
-      - name: Build BLE Beacon
-        run: |
-          west build -p always -b esp32_devkitc app/BLE_Beacon
-
-      # 7️⃣ Upload generated firmware
-      - name: Upload firmware
+      # ------------------------------------------------------------------ #
+      # 5. Upload zephyr.bin as a build artifact
+      # ------------------------------------------------------------------ #
+      - name: Upload firmware binary
         uses: actions/upload-artifact@v4
         with:
-          name: BLE-Beacon-Firmware
-          path: build/zephyr/*.bin
+          name: ble_beacon_esp32_${{ github.sha }}
+          path: build/zephyr/zephyr.bin
+          retention-days: 30
