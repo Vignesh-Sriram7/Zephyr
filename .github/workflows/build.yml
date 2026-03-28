@@ -27,7 +27,7 @@ jobs:
 
       - name: Build BLE Beacon
         run: |
-          # No manual SDK or toolchain exports needed!
+          export ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
       - name: Upload Binary
