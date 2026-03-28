@@ -1,65 +1,36 @@
-name: Build ESP32 BLE Beacon
-
+name: Build ESP32 BLE Beacon (Docker)
 on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    env:
-      BOARD: esp32_devkitc_wroom
-      APP_PATH: BLE_Beacon
+    # This is the "magic" line - it runs the whole job inside the Zephyr container
+    container:
+      image: ghcr.io/zephyrproject-rtos/zephyr-build:main
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          path: app
 
-      - name: Install system dependencies
+      - name: Initialize West Workspace
+        # Inside the container, 'west' is already installed and ready
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git cmake ninja-build gperf ccache dfu-util \
-            device-tree-compiler wget python3-pip \
-            python3-setuptools python3-wheel xz-utils file make gcc \
-            libsdl2-dev libmagic1
-
-      - name: Install west
-        run: pip install west
-
-      - name: Initialize west workspace (uses YOUR west.yml)
-        run: |
-          west init -l .
+          west init -l app
           west update
+          # This pulls the ESP32-specific binary blobs (WiFi/Bluetooth)
+          west blobs fetch hal_espressif
 
-      - name: Install Python dependencies
+      - name: Build BLE Beacon
         run: |
-          pip install -r zephyr/scripts/requirements.txt
+          # No manual SDK or toolchain exports needed!
+          west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
-      - name: Install Zephyr SDK
-        run: |
-          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/latest/download/zephyr-sdk_linux-x86_64.tar.xz
-          tar xvf zephyr-sdk_linux-x86_64.tar.xz
-          cd zephyr-sdk-*
-          sudo ./setup.sh -t all -h -c
-
-      - name: Export Zephyr environment
-        run: |
-          echo "ZEPHYR_BASE=$GITHUB_WORKSPACE/zephyr" >> $GITHUB_ENV
-
-      - name: Build BLE_Beacon
-        run: |
-          west build -b $BOARD $APP_PATH --pristine
-
-      - name: Upload firmware artifacts
+      - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
-          name: ble-beacon-esp32
+          name: BLE-Beacon-Firmware
           path: |
             build/zephyr/zephyr.bin
-            build/zephyr/bootloader.bin
-            build/zephyr/partition_table.bin
+            build/zephyr/merged.bin
