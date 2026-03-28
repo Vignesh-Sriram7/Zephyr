@@ -1,39 +1,39 @@
-name: Build ESP32 BLE Beacon (Docker)
+name: Build ESP32 BLE Beacon
+
 on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # This is the "magic" line - it runs the whole job inside the Zephyr container
+
     container:
       image: ghcr.io/zephyrproject-rtos/zephyr-build:main
       options: --user root
 
     steps:
-      - name: Fix workspace permissions
-        run: chown -R $(id -u):$(id -g) .
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: app
 
-      - name: Initialize West Workspace
+      - name: Initialize West workspace
         run: |
-          west init -l app || true
+          west init -l app
           west update
-          # Only fetch blobs for the standard ESP32 to avoid the 502 error on C2
-          west blobs fetch hal_espressif --modules=esp32
+
+      - name: Set environment
+        run: |
+          echo "ZEPHYR_TOOLCHAIN_VARIANT=zephyr" >> $GITHUB_ENV
+          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk" >> $GITHUB_ENV
 
       - name: Build BLE Beacon
         run: |
-          export ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk
-          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
+          west build -p always \
+            -b esp32_devkitc \
+            app/BLE_Beacon
 
-      - name: Upload Binary
+      - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
           name: BLE-Beacon-Firmware
-          path: |
-            build/zephyr/zephyr.bin
-            build/zephyr/merged.bin
+          path: build/zephyr/*.bin
