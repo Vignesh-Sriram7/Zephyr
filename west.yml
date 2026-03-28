@@ -8,4 +8,4 @@ manifest:
       revision: main # or a specific version like v3.5.0
       import: true
   self:
-    path: .
+    path: app
