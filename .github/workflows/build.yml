@@ -48,8 +48,12 @@ jobs:
 
       - name: Build BLE Beacon
         run: |
-          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk-0.17.0
+          # Use the environment variables set by the previous steps
+          # We force Zephyr to use the Xtensa-esp variant we downloaded
           export ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp
+          export XTENSA_ESP32_ELF_TOOLCHAIN_PATH="$HOME/xtensa-esp32-elf"
+          
+          # Run the build
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
           
       - name: Upload Flashable Binary
