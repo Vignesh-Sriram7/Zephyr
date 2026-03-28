@@ -1,51 +1,65 @@
 name: Build ESP32 BLE Beacon
+
 on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      BOARD: esp32_devkitc_wroom
+      APP_PATH: BLE_Beacon
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          path: app
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Host Tools
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y device-tree-compiler ninja-build gperf wget xz-utils
+          sudo apt-get install -y \
+            git cmake ninja-build gperf ccache dfu-util \
+            device-tree-compiler wget python3-pip \
+            python3-setuptools python3-wheel xz-utils file make gcc \
+            libsdl2-dev libmagic1
 
-      - name: Setup Zephyr Project
+      - name: Install west
+        run: pip install west
+
+      - name: Initialize west workspace (uses YOUR west.yml)
         run: |
-          pip install west
-          west init -m https://github.com/zephyrproject-rtos/zephyr --mr v4.0.0 zephyrproject
-          cd zephyrproject
+          west init -l .
           west update
-          west zephyr-export
+
+      - name: Install Python dependencies
+        run: |
           pip install -r zephyr/scripts/requirements.txt
 
-      - name: Install Zephyr SDK (Minimal + Xtensa)
+      - name: Install Zephyr SDK
         run: |
-          cd $HOME
-          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/zephyr-sdk-0.17.0_linux-x86_64_minimal.tar.xz
-          tar xvf zephyr-sdk-0.17.0_linux-x86_64_minimal.tar.xz
-          cd zephyr-sdk-0.17.0
-          # Install ONLY the xtensa toolchain to save time
-          ./setup.sh -t xtensa-zephyr-elf -h -c
+          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/latest/download/zephyr-sdk_linux-x86_64.tar.xz
+          tar xvf zephyr-sdk_linux-x86_64.tar.xz
+          cd zephyr-sdk-*
+          sudo ./setup.sh -t all -h -c
 
-      - name: Build BLE Beacon
+      - name: Export Zephyr environment
         run: |
-          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk-0.17.0
-          cd zephyrproject
-          west build -p always -b esp32_devkitc/esp32/procpu ../app/BLE_Beacon
+          echo "ZEPHYR_BASE=$GITHUB_WORKSPACE/zephyr" >> $GITHUB_ENV
 
-      - name: Upload Binary
+      - name: Build BLE_Beacon
+        run: |
+          west build -b $BOARD $APP_PATH --pristine
+
+      - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BLE-Beacon-Firmware
-          path: zephyrproject/build/zephyr/zephyr.bin
+          name: ble-beacon-esp32
+          path: |
+            build/zephyr/zephyr.bin
+            build/zephyr/bootloader.bin
+            build/zephyr/partition_table.bin
