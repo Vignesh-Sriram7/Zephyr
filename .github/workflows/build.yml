@@ -1,3 +1,4 @@
+
 name: Build ESP32 BLE Beacon
 
 on:
@@ -23,9 +24,8 @@ jobs:
       - name: Setup Zephyr Base (No Toolchains here)
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
-          app-path: path
+          app-path: app
           sdk-version: 0.17.0
-          zephyr-version: v3.7.0
           # We leave toolchains EMPTY to let the action finish successfully
 
       - name: Install ESP32 (xtensa) Toolchain
@@ -47,15 +47,8 @@ jobs:
           
           # Tell Zephyr to use ESP32 variant
           echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
-
       - name: Build BLE Beacon
         run: |
-          # Use the environment variables set by the previous steps
-          # We force Zephyr to use the Xtensa-esp variant we downloaded
-          export ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp
-          export XTENSA_ESP32_ELF_TOOLCHAIN_PATH="$HOME/xtensa-esp32-elf"
-          
-          # Run the build
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
           
       - name: Upload Flashable Binary
