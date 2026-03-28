@@ -18,16 +18,16 @@ jobs:
           path: app
 
       - name: Initialize West Workspace
-        # Inside the container, 'west' is already installed and ready
         run: |
-          west init -l app
+          west init -l app || true
           west update
-          # This pulls the ESP32-specific binary blobs (WiFi/Bluetooth)
-          west blobs fetch hal_espressif
+          # Only fetch blobs for the standard ESP32 to avoid the 502 error on C2
+          west blobs fetch hal_espressif --modules=esp32
 
       - name: Build BLE Beacon
         run: |
           export ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk
+          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
       - name: Upload Binary
