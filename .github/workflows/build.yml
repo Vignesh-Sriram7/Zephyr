@@ -23,39 +23,24 @@ jobs:
       CMAKE_PREFIX_PATH: /opt/toolchains
 
     steps:
-      # ------------------------------------------------------------------ #
-      # 1. Checkout your application repo
-      # ------------------------------------------------------------------ #
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: Zephyr   # checked out into a subfolder so west can manage the workspace
 
-      # ------------------------------------------------------------------ #
-      # 2. Set up the west workspace using your west.yml manifest
-      # ------------------------------------------------------------------ #
       - name: Initialize west workspace
         run: |
           west init -l Zephyr
           west update --narrow --fetch-opt=--depth=1
 
-      # ------------------------------------------------------------------ #
-      # 3. Fetch required Espressif binary blobs (closed-source BT libs)
-      # ------------------------------------------------------------------ #
       - name: Fetch Espressif binary blobs
         run: |
           west blobs fetch hal_espressif
 
-      # ------------------------------------------------------------------ #
-      # 4. Export Zephyr CMake package so the build system can find it
-      # ------------------------------------------------------------------ #
       - name: Export Zephyr CMake package
         run: |
           west zephyr-export
 
-      # ------------------------------------------------------------------ #
-      # 4. Build the application
-      # ------------------------------------------------------------------ #
       - name: Build BLE_Beacon
         run: |
           west build \
@@ -65,9 +50,6 @@ jobs:
             -- \
             -DCONFIG_BT=y
 
-      # ------------------------------------------------------------------ #
-      # 5. Upload zephyr.bin as a build artifact
-      # ------------------------------------------------------------------ #
       - name: Upload firmware binary
         uses: actions/upload-artifact@v4
         with:
