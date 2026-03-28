@@ -1,8 +1,5 @@
 name: Build ESP32 BLE Beacon
-on:
-  push:
-    branches: [main]
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build:
@@ -18,40 +15,29 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Host Dependencies
+      - name: Install Host Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y device-tree-compiler ninja-build gperf
 
-      - name: Setup Zephyr Base
+      - name: Setup Zephyr and SDK
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: app
           sdk-version: 0.17.0
-
-      - name: Install ESP32 (xtensa) Toolchain
-        run: |
-          TOOLCHAIN_URL="https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz"
-          TOOLCHAIN_SHA="4d2e02ef47f1a93a4dcfdbaecd486adfaab4c0e26deea2c18d6385527f39f864"
-          
-          wget $TOOLCHAIN_URL -O xtensa-esp32-elf.tar.xz
-          echo "$TOOLCHAIN_SHA  xtensa-esp32-elf.tar.xz" | sha256sum -c -
-          tar -xJf xtensa-esp32-elf.tar.xz -C $HOME
-          
-          # Export the exact variables Zephyr 4.4.0 needs
-          echo "ZEPHYR_TOOLCHAIN_VARIANT=xtensa-esp" >> $GITHUB_ENV
-          echo "ESPRESSIF_TOOLCHAIN_PATH=$HOME/xtensa-esp32-elf" >> $GITHUB_ENV
-          echo "$HOME/xtensa-esp32-elf/bin" >> $GITHUB_PATH
+          # We tell the action to install the specific xtensa toolchain for us
+          toolchains: xtensa-esp32-elf 
 
       - name: Build BLE Beacon
         run: |
-          # We use the workspace-relative path for the app
+          # The action sets ZEPHYR_SDK_INSTALL_DIR automatically.
+          # We just need to specify the variant.
+          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+          
           west build -p always -b esp32_devkitc/esp32/procpu app/BLE_Beacon
 
-      - name: Upload Flashable Binary
+      - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: BLE-Beacon-Firmware
-          path: |
-            build/zephyr/zephyr.bin
-            build/zephyr/merged.bin
+          path: build/zephyr/zephyr.bin
