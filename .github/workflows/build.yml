@@ -7,8 +7,11 @@ jobs:
     # This is the "magic" line - it runs the whole job inside the Zephyr container
     container:
       image: ghcr.io/zephyrproject-rtos/zephyr-build:main
+      options: --user root
 
     steps:
+      - name: Fix workspace permissions
+        run: chown -R $(id -u):$(id -g) .
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
