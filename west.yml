@@ -1,16 +1,10 @@
 manifest:
   version: "0.13"
 
-  # ------------------------------------------------------------------ #
-  # Remote sources
-  # ------------------------------------------------------------------ #
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
 
-  # ------------------------------------------------------------------ #
-  # Projects pulled in by `west update`
-  # ------------------------------------------------------------------ #
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
@@ -20,8 +14,5 @@ manifest:
         # (HALs, crypto libs, SEGGER RTT, etc.)
         file: west.yml
 
-  # ------------------------------------------------------------------ #
-  # This repo is the west "manifest repository"
-  # ------------------------------------------------------------------ #
   self:
     path: Zephyr
