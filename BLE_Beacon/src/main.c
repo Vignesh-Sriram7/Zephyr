@@ -285,7 +285,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		current_con = bt_conn_ref(conn);
 		char addr[BT_ADDR_LE_STR_LEN];
 		// bt_conn_get_dst --> gets the destination adddress of the connection
-		bt_addr_le_to_str(bt_conn_get_dst(conn), connected_addr_str, sizeof(addr));	// Convert the obtained address to readable string
+		bt_addr_le_to_str(bt_conn_get_dst(conn), connected_addr_str, sizeof(connected_addr_str));	// Convert the obtained address to readable string
 		printk("Connected to: %s\n Stopping Scan\n", connected_addr_str);
 		bt_le_scan_stop();
 		k_work_schedule(&rssi_work, K_MSEC(100));
