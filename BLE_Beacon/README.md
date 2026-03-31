@@ -1,4 +1,4 @@
-# 🛰️ Secure Proximity Anchor  
+# 🛰️ BLE_Beacon
 High-Availability BLE Firmware with Recursive Signal Filtering
 
 A deterministic, RTOS-based **Bluetooth Low Energy (BLE) peripheral** designed for industrial proximity sensing.  
@@ -8,9 +8,9 @@ Built on **Zephyr RTOS** for the **ESP32**, this project combines **real-time si
 
 # Key Technical Features
 
-## 1. Discrete Kalman Filter (Signal Integrity)
+## Discrete Kalman Filter (Signal Integrity)
 
-To mitigate the inherent noise and multi-path fading of **2.4 GHz RSSI signals**, a **recursive Kalman Filter** is implemented.
+To mitigate the inherent noise and multi-path fading of 2.4 GHz RSSI signals, a recursive Kalman Filter is implemented.
 
 **Result**
 - Raw RSSI values become smooth and predictable
@@ -25,9 +25,9 @@ The filter continuously updates the estimated distance using incoming RSSI measu
 
 ---
 
-## 2. Deterministic Work Scheduling
+## Deterministic Work Scheduling
 
-Instead of using a CPU-intensive polling loop, the firmware relies on **Zephyr Global Work Queues**.
+Instead of using a CPU-intensive polling loop, the firmware relies on Zephyr Global Work Queues.
 
 **RSSI Polling**
 - Implemented with `k_work_delayable`
@@ -42,7 +42,7 @@ Instead of using a CPU-intensive polling loop, the firmware relies on **Zephyr G
 
 ## 3. Hardware-Level Reliability (Watchdog)
 
-Designed for **always-on industrial environments**.
+Designed for always-on industrial environments.
 
 **Supervision**
 - Hardware Watchdog Timer (WDT)
@@ -50,7 +50,7 @@ Designed for **always-on industrial environments**.
 
 **Fail-Safe Behavior**
 - The watchdog is refreshed inside the RSSI poller
-- If the system deadlocks, the SoC performs a **cold reset**
+- If the system deadlocks, the SoC performs a cold reset
 
 ---
 
@@ -64,11 +64,11 @@ Designed for **always-on industrial environments**.
 - Integrated with Zephyr Settings subsystem
 - Stores bonding keys across power cycles
 
-This enables **seamless reconnection** for trusted devices.
+This enables seamless reconnection for trusted devices.
 
 ---
 
-# 🛠️ Stack & Hardware
+# Stack & Hardware
 
 **RTOS**  
 Zephyr RTOS
@@ -125,15 +125,6 @@ C
 - RSSI values are sampled periodically  
 - Kalman filter produces stable distance estimates  
 - Watchdog ensures continuous operation  
-
----
-
-## Future Improvements
-
-- Deep-sleep optimization for ultra-low power operation  
-- OTA firmware updates using MCUmgr  
-- Multi-device tracking with multiple Kalman filter instances  
-- Distance-based alert or trigger system  
 
 ---
 
