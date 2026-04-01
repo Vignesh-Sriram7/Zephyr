@@ -51,7 +51,7 @@ jobs:
         run: |
           west build \
             --pristine \
-            --board esp32_devkitc_wroom/esp32/procpu \
+            --board esp32_devkitc_wroom/esp32/appcpu \
             Zephyr/BLE_Beacon 
 
       - name: Upload firmware binary
