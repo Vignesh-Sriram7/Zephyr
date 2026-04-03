@@ -8,7 +8,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
-      revision: v3.7.0          # Pin to a stable release; bump when upgrading
+      revision: v4.1.0         # Pin to a stable release; bump when upgrading
       import:
         # Pull in all of Zephyr's own west.yml dependencies
         # (HALs, crypto libs, SEGGER RTT, etc.)
