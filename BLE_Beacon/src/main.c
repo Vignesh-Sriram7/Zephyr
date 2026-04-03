@@ -274,6 +274,12 @@ void connected_rssi_poller(struct k_work *work)
     k_work_reschedule(&rssi_work, K_MSEC(1000)); // Repeat every 1s
 }
 
+static void stop_scan_work_handler(struct k_work *work)
+{
+    bt_le_scan_stop();
+}
+static K_WORK_DEFINE(stop_scan_work, stop_scan_work_handler);
+
 /* Connection Callbacks*/
 // Triggered the moment the radio handshake is successful --> not authenticated
 static void connected(struct bt_conn *conn, uint8_t err)
@@ -287,7 +293,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		// bt_conn_get_dst --> gets the destination adddress of the connection
 		bt_addr_le_to_str(bt_conn_get_dst(conn), connected_addr_str, sizeof(connected_addr_str));	// Convert the obtained address to readable string
 		printk("Connected to: %s\n Stopping Scan\n", connected_addr_str);
-		bt_le_scan_stop();
+		k_work_submit(&stop_scan_work);
 		k_work_schedule(&rssi_work, K_MSEC(100));
 	}
 }
@@ -354,6 +360,9 @@ static void bt_ready(int err)
         settings_load();
         printk("Settings loaded (Bonds restored)\n");
     }
+
+	// Register the authentication functions for randomness
+	bt_conn_auth_cb_register(&auth_cb_display);
 
 	adv_param = *BT_LE_ADV_CONN_FAST_1;
 	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
@@ -434,9 +443,6 @@ int main(void)
 		printk("Bluetooth init failed (err %d)\n", err);
 		return 0;
 	}
-
-	// Register the authentication functions for randomness
-	bt_conn_auth_cb_register(&auth_cb_display);
 
 
 	while (1) {
