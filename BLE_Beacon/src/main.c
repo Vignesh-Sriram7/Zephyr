@@ -274,6 +274,7 @@ void connected_rssi_poller(struct k_work *work)
     k_work_reschedule(&rssi_work, K_MSEC(1000)); // Repeat every 1s
 }
 
+// Define the stop scan as a separate work queue to prevent deadlock
 static void stop_scan_work_handler(struct k_work *work)
 {
     bt_le_scan_stop();
