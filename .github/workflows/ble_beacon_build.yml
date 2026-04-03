@@ -51,9 +51,9 @@ jobs:
         run: |
           west build \
             --pristine \
-            --board esp32_devkitc_wroom \
-            Zephyr/BLE_Beacon 
-
+            --board esp32_devkitc_wroom/esp32/procpu \
+            Zephyr/BLE_Beacon \
+            -- \
       - name: Upload firmware binary
         uses: actions/upload-artifact@v4
         with:
