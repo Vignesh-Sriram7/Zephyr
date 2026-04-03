@@ -355,7 +355,7 @@ static void bt_ready(int err)
         printk("Settings loaded (Bonds restored)\n");
     }
 
-	adv_param = *BT_LE_ADV_CONN_NAME;
+	adv_param = *BT_LE_ADV_CONN_FAST_1;
 	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
