@@ -135,4 +135,14 @@ This project focuses on **high-reliability BLE firmware design** using Zephyr RT
 - Real-time signal filtering  
 - Deterministic scheduling  
 - Secure BLE communication  
-- Fault-tolerant embedded firmware design  
+- Fault-tolerant embedded firmware design
+
+## Output
+<p align="center">
+  <img src="Screenshot 2026-04-08 223616.png" width="300">
+  <img src="Screenshot 2026-04-08 223629.png" width="300">
+  <img src="Screenshot 2026-04-08 223643.png" width="300">
+  <img src="Screenshot 2026-04-08 223701.png" width="300">
+  <img src="Screenshot 2026-04-08 223654.png" width="300">
+  <img src="Screenshot 2026-04-08 223708.png" width="300">
+</p>
