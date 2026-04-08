@@ -1,4 +1,4 @@
-# 🛰️ BLE_Beacon
+#  BLE_Beacon
 High-Availability BLE Firmware with Recursive Signal Filtering
 
 A deterministic, RTOS-based **Bluetooth Low Energy (BLE) peripheral** designed for industrial proximity sensing.  
