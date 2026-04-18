@@ -1,0 +1,11 @@
+/* app.overlay */
+/ {
+    aliases {
+        led0 = &green_led_2;
+    };
+};
+
+&usart2 {
+    status = "okay";
+    current-speed = <115200>;
+};
