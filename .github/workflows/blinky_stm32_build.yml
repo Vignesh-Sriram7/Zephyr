@@ -1,0 +1,49 @@
+name: Build Zephyr blinky_stm32 (STM32F303RE)
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'blinky_stm32/**'
+      - '.github/workflows/blinky_stm32_build.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'blinky_stm32/**'
+      - '.github/workflows/blinky_stm32_build.yml'
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+jobs:
+  build:
+    name: Build blinky_stm32 for nucleo_f303re
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.27.4
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: Zephyr   # checked out into a subfolder so west can manage the workspace
+      - name: Initialize west workspace
+        run: |
+          west init -l Zephyr
+          west update --narrow --fetch-opt=--depth=1
+      - name: Export Zephyr CMake package
+        run: |
+          west zephyr-export
+      - name: Build blinky_stm32
+        run: |
+          west build \
+            --pristine \
+            --board nucleo_f303re \
+            Zephyr/blinky_stm32
+      - name: Upload firmware binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: blinky_stm32_nucleo_f303re_${{ github.sha }}
+          path: build/zephyr/zephyr.bin
+          retention-days: 30
