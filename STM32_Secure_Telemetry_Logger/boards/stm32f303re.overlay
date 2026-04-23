@@ -1,9 +1,18 @@
 / {
+    /* The chosen node is used to specify the flash and entropy devices for the system  
+       which are therefore defined partitions in flash0 and the Random Number Generator RNG*/
     chosen {
 		zephyr,flash = &flash0;
+        zephyr,entropy = &rng;
 	};
+
+    /
+    aliases {
+        my-temp = &my_bme280_i2c;   // Alias for BME280 temperature sensor
+    };
 };
 
+// The partitions are split as 6KB for both NVS which stores the sequence number and the storage which stroes the telemetry log
 &flash0 {
     partitions {
         compatible = "fixed-partitions";
@@ -20,4 +29,29 @@
             reg = <0x7e800 0x1800>;
     };
 };
+};
+
+// The RNG is enabled to generate random numbers for the sequence number of the telemetry log
+&rng {
+    status = "okay";
+};
+
+// The BME280 sensor is defined as a child of the I2C1 bus with its compatible and I2C address
+&i2c1 {
+    status = "okay";
+    pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
+    pinctrl-names = "default";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+    /* The sensor is a child of the bus */
+    my_bme280_i2c: bme280@77 {
+        compatible = "bosch,bme280";
+        reg = <0x77>;
+    };
+};
+
+// USART2 is enabled for serial communication with the host computer for debugging and telemetry output
+&usart2 {
+    status = "okay";
+    current-speed = <115200>;
 };
