@@ -17,6 +17,9 @@
 // Retrieve the Sensor device
 static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp));
 
+// Retrieve the RNG device
+static const struct device *const dev_rng = DEVICE_DT_GET(DT_NODELABEL(rng));
+
 // Define the nvs file system structure
 static struct nvs_fs fs;
 
@@ -26,34 +29,82 @@ static const struct device *const storage_dev = STORAGE_PARTITION;
 
 int main(void){
 
-int rc = 0;
-// To obtain the page size
-struct flash_pages_info info;
+    // Declare the varaibles required for the bme280 sensor
+    int ret;
+    struct sensor_value temp;
 
-// Set up the NVS as a file manager
-fs.flash_device = FIXED_PARTITION_DEVICE(nvs_partition);
-if (!device_is_ready(fs.flash_device)) {
-    printk("Flash device %s is not ready\n", fs.flash_device->name);
-    return 0;
-}
-fs.offset = FIXED_PARTITION_OFFSET(nvs_partition);
+    // Declare the variables required for the NVS setup
+    int rc = 0;
+    // To obtain the page size
+    struct flash_pages_info info;
 
-// Obtain flash page info to get the sector size
-rc = flash_get_page_info_by_offs(fs.flash_device, fs.offset, &info);
-if (rc) {
-    printk("Unable to get page info, rc=%d\n", rc);
-    return 0;
-}
-fs.sector_size = info.size;
-// Set sector count based on total partition size / total page size
-fs.sector_count = 3U;
+    // Declare the RNG tokens 32 bit
+    uint8_t token[4];
 
-// Mount to booth the file manage for those partitions
-rc = nvs_mount(&fs);
-	if (rc) {
-		printk("Flash Init failed, rc=%d\n", rc);
-		return 0;
-	}
+    /* CHECK IF DEVICES ARE READY */
 
-printk("NVS mounted successfully\n");
+    if(!device_is_ready(bme280)){
+            printk("Device %s is not ready.\n", bme280->name);
+            return 0;
+        }
+
+    if(!device_is_ready(dev_rng)){
+            printk("Device %s is not ready.\n", dev_rng->name);
+            return 0;
+        }
+
+    /* -----------------NVS SETUP-------------------*/
+
+    // Set up the NVS as a file manager
+    fs.flash_device = FIXED_PARTITION_DEVICE(nvs_partition);
+    if (!device_is_ready(fs.flash_device)) {
+        printk("Flash device %s is not ready\n", fs.flash_device->name);
+        return 0;
+    }
+    fs.offset = FIXED_PARTITION_OFFSET(nvs_partition);
+
+    // Obtain flash page info to get the sector size
+    rc = flash_get_page_info_by_offs(fs.flash_device, fs.offset, &info);
+    if (rc) {
+        printk("Unable to get page info, rc=%d\n", rc);
+        return 0;
+    }
+    fs.sector_size = info.size;
+    // Set sector count based on total partition size / total page size
+    fs.sector_count = 3U;
+
+    // Mount to booth the file manage for those partitions
+    rc = nvs_mount(&fs);
+        if (rc) {
+            printk("Flash Init failed, rc=%d\n", rc);
+            return 0;
+        }
+
+    printk("NVS mounted successfully\n");
+
+    /*----------------------------------------------*/
+
+    while(1){
+        ret = sensor_sample_fetch(bme280);
+        if(ret < 0){
+            printk("Sample Fetch Error: %d\n", ret);
+            continue;
+        }
+
+        ret = sensor_channel_get(bme280, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+        if(ret < 0){
+            printk("Channel Get Error: %d\n", ret);
+            continue;
+        }
+        
+        // Get the anti-replay tokens
+        entropy_get_entropy(dev_rng, token, sizeof(token));
+
+        printk("Temp: %d.%06d | Token: %02x%02x%02x%02x\n", 
+                temp.val1, temp.val2, 
+                token[0], token[1], token[2], token[3]);
+
+        k_msleep(1000);
+    }
+
 }
