@@ -27,6 +27,16 @@ static struct nvs_fs fs;
 #define STORAGE_PARTITION FIXED_PARTITION_DEVICE(storage_partition)
 static const struct device *const storage_dev = STORAGE_PARTITION;
 
+
+// Define the struct to hold the logging data
+struct __attribute__((packed)) log_entry {
+    uint32_t seq_num;        // From NVS
+    int32_t  temp_mantissa;  // temp.val1
+    int32_t  temp_fraction;  // temp.val2
+    uint8_t  rng_token[4];   // From Entropy
+    uint8_t  mac[16];        // The HMAC signature
+};
+
 int main(void){
 
     // Declare the varaibles required for the bme280 sensor
@@ -53,7 +63,9 @@ int main(void){
             return 0;
         }
 
-    /* -----------------NVS SETUP-------------------*/
+
+
+    /* NVS SETUP*/
 
     // Set up the NVS as a file manager
     fs.flash_device = FIXED_PARTITION_DEVICE(nvs_partition);
@@ -81,8 +93,8 @@ int main(void){
         }
 
     printk("NVS mounted successfully\n");
+    
 
-    /*----------------------------------------------*/
 
     while(1){
         ret = sensor_sample_fetch(bme280);
