@@ -27,6 +27,8 @@ static struct nvs_fs fs;
 #define STORAGE_PARTITION FIXED_PARTITION_DEVICE(storage_partition)
 static const struct device *const storage_dev = STORAGE_PARTITION;
 
+#define SEQ_NUM_ID 1
+static uint32_t current_seq = 0; // Local variable to hold the number
 
 // Define the struct to hold the logging data
 struct __attribute__((packed)) log_entry {
@@ -50,6 +52,8 @@ int main(void){
 
     // Declare the RNG tokens 32 bit
     uint8_t token[4];
+
+    struct log_entry my_log;
 
     /* CHECK IF DEVICES ARE READY */
 
@@ -94,9 +98,19 @@ int main(void){
 
     printk("NVS mounted successfully\n");
     
+    
+    rc = nvs_read(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
 
+    if(rc<=0)
+    {
+        printk("Error fetching the sequence numeber\n");
+    }
+
+    else
+        printk("Sequence number fetched %d \n", current_seq);
 
     while(1){
+
         ret = sensor_sample_fetch(bme280);
         if(ret < 0){
             printk("Sample Fetch Error: %d\n", ret);
@@ -111,6 +125,15 @@ int main(void){
         
         // Get the anti-replay tokens
         entropy_get_entropy(dev_rng, token, sizeof(token));
+
+        // Increment the counter
+        current_seq++;
+
+        // Link it to the struct
+        my_log.seq_num = current_seq;
+
+        // Save the NEW number back to NVS 
+        nvs_write(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
 
         printk("Temp: %d.%06d | Token: %02x%02x%02x%02x\n", 
                 temp.val1, temp.val2, 
