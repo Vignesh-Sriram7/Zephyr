@@ -27,8 +27,13 @@ static struct nvs_fs fs;
 #define STORAGE_PARTITION FIXED_PARTITION_DEVICE(storage_partition)
 static const struct device *const storage_dev = STORAGE_PARTITION;
 
+// Let the ID for the sequence number be 1
 #define SEQ_NUM_ID 1
-static uint32_t current_seq = 0; // Local variable to hold the number
+// Local variable to hold the number
+static uint32_t current_seq = 0;
+
+// Acts like bookmark
+static uint32_t write_offset = 0;
 
 // Define the struct to hold the logging data
 struct __attribute__((packed)) log_entry {
@@ -66,7 +71,6 @@ int main(void){
             printk("Device %s is not ready.\n", dev_rng->name);
             return 0;
         }
-
 
 
     /* NVS SETUP*/
@@ -134,6 +138,28 @@ int main(void){
 
         // Save the NEW number back to NVS 
         nvs_write(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
+        my_log.temp_mantissa = temp.val1;
+        my_log.temp_fraction = temp.val2;
+
+        memcpy(my_log.rng_token, token, 4);
+
+        memset(my_log.mac, 0, 16);
+
+        rc = flash_write(storage_dev, write_offset, &my_log, sizeof(my_log));
+
+        if (rc == 0) {
+            printk("Log #%d saved to storage at offset %d\n", current_seq, write_offset);
+
+            write_offset += sizeof(my_log);
+
+            if (write_offset + sizeof(my_log) > FIXED_PARTITION_SIZE(storage_partition)) {
+                printk("Storage full! Restarting from offset 0...\n");
+                write_offset = 0;
+            }
+        } else {
+            printk("Error writing to storage: %d\n", rc);
+            }
+
 
         printk("Temp: %d.%06d | Token: %02x%02x%02x%02x\n", 
                 temp.val1, temp.val2, 
