@@ -32,6 +32,9 @@ static const struct device *const storage_dev = STORAGE_PARTITION;
 
 // Let the ID for the sequence number be 1
 #define SEQ_NUM_ID 1
+
+// Let the ID for the HMAC be 2#
+#define HMAC_ID 2
 // Local variable to hold the number
 static uint32_t current_seq = 0;
 
@@ -39,12 +42,8 @@ static uint32_t current_seq = 0;
 static uint32_t write_offset = 0;
 
 // HMAC key
-static const uint8_t hmac_key[16] = {
-    0x10, 0x22, 0x33, 0x44,
-    0x55, 0x66, 0x77, 0x88,
-    0x99, 0xaa, 0xbb, 0xcc,
-    0xdd, 0xee, 0xff, 0x01
-};
+static uint8_t hmac_key[16];
+
 
 // Define the struct to hold the logging data
 struct __attribute__((packed)) log_entry {
@@ -54,6 +53,25 @@ struct __attribute__((packed)) log_entry {
     uint8_t  rng_token[4];   // From Entropy
     uint8_t  mac[32];        // The HA-256 HMAC is 32 bytes
 };
+
+
+static int compute_hmac(struct log_entry *entry, uint8_t *key)
+{
+    const mbedtls_md_info_t *md_info;
+
+    md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    if (md_info == NULL) {
+        return -1;
+    }
+
+    return mbedtls_md_hmac(
+        md_info,
+        key, 16,
+        (const unsigned char *)entry,
+        sizeof(struct log_entry) - sizeof(entry->mac), // ❗ exclude MAC
+        entry->mac
+    );
+}
 
 int main(void){
 
@@ -124,6 +142,21 @@ int main(void){
     else
         printk("Sequence number fetched %d \n", current_seq);
 
+    rc = nvs_read(&fs, HMAC_ID, hmac_key, sizeof(hmac_key));
+
+    if (rc <= 0) {
+        printk("No key found, generating new one...\n");
+
+        if (entropy_get_entropy(dev_rng, hmac_key, sizeof(hmac_key)) != 0) {
+            printk("Failed to generate HMAC key\n");
+            return 0;
+        }
+
+        nvs_write(&fs, HMAC_ID, hmac_key, sizeof(hmac_key));
+    } else {
+        printk("HMAC key loaded from NVS\n");
+    }
+
     while(1){
 
         ret = sensor_sample_fetch(bme280);
@@ -154,7 +187,12 @@ int main(void){
 
         memcpy(my_log.rng_token, token, 4);
 
-        memset(my_log.mac, 0, 16);
+        memset(my_log.mac, 0, sizeof(my_log.mac));
+
+        if (compute_hmac(&my_log, hmac_key) != 0) {
+            printk("HMAC computation failed\n");
+            continue;
+        }
 
         rc = flash_write(storage_dev, write_offset, &my_log, sizeof(my_log));
 
