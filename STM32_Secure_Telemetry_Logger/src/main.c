@@ -13,6 +13,9 @@
 // To generate anti replay tokens
 #include <zephyr/drivers/entropy.h>
 
+// Include the APIs of mbedtls
+#include <mbedtls/md.h>
+
 
 // Retrieve the Sensor device
 static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp));
@@ -35,13 +38,21 @@ static uint32_t current_seq = 0;
 // Acts like bookmark
 static uint32_t write_offset = 0;
 
+// HMAC key
+static const uint8_t hmac_key[16] = {
+    0x10, 0x22, 0x33, 0x44,
+    0x55, 0x66, 0x77, 0x88,
+    0x99, 0xaa, 0xbb, 0xcc,
+    0xdd, 0xee, 0xff, 0x01
+};
+
 // Define the struct to hold the logging data
 struct __attribute__((packed)) log_entry {
     uint32_t seq_num;        // From NVS
     int32_t  temp_mantissa;  // temp.val1
     int32_t  temp_fraction;  // temp.val2
     uint8_t  rng_token[4];   // From Entropy
-    uint8_t  mac[16];        // The HMAC signature
+    uint8_t  mac[32];        // The HA-256 HMAC is 32 bytes
 };
 
 int main(void){
