@@ -131,16 +131,22 @@ int main(void){
 
     printk("NVS mounted successfully\n");
     
-    
+    rc = flash_erase(storage_dev, 0, FIXED_PARTITION_SIZE(storage_partition));
+
+    if (rc != 0) {
+        printk("Flash erase failed: %d\n", rc);
+    }
+        
     rc = nvs_read(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
 
-    if(rc<=0)
-    {
-        printk("Error fetching the sequence numeber\n");
+    if (rc < 0) {
+        printk("Error reading sequence number\n");
+    } else if (rc == 0) {
+        printk("No stored sequence number found\n");
+        current_seq = 0;
+    } else {
+        printk("Sequence number fetched %d\n", current_seq);
     }
-
-    else
-        printk("Sequence number fetched %d \n", current_seq);
 
     rc = nvs_read(&fs, HMAC_ID, hmac_key, sizeof(hmac_key));
 
@@ -172,7 +178,11 @@ int main(void){
         }
         
         // Get the anti-replay tokens
-        entropy_get_entropy(dev_rng, token, sizeof(token));
+        if(entropy_get_entropy(dev_rng, token, sizeof(token))!=0)
+        {
+            printk("Token generation failed\n");
+            continue;
+        }
 
         // Increment the counter
         current_seq++;
@@ -203,6 +213,11 @@ int main(void){
 
             if (write_offset + sizeof(my_log) > FIXED_PARTITION_SIZE(storage_partition)) {
                 printk("Storage full! Restarting from offset 0...\n");
+                rc = flash_erase(storage_dev, 0, FIXED_PARTITION_SIZE(storage_partition));
+
+                if (rc != 0) {
+                    printk("Flash erase failed: %d\n", rc);
+                }
                 write_offset = 0;
             }
         } else {
