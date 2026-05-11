@@ -54,7 +54,7 @@ struct __attribute__((packed)) log_entry {
     uint8_t  mac[32];        // The HA-256 HMAC is 32 bytes
 };
 
-
+// Function to compute the HMAC security key
 static int compute_hmac(struct log_entry *entry, uint8_t *key)
 {
     const mbedtls_md_info_t *md_info;
@@ -73,6 +73,28 @@ static int compute_hmac(struct log_entry *entry, uint8_t *key)
     );
 }
 
+
+// Function to verify the HMAC integrity
+void verify_log(uint32_t offset)
+{
+    struct log_entry read_log;
+    uint8_t stored_mac[32];
+
+    flash_read(storage_dev, offset, &read_log, sizeof(read_log));
+
+    memcpy(stored_mac, read_log.mac, 32);
+
+    memset(read_log.mac, 0, 32);
+
+    compute_hmac(&read_log, hmac_key);
+
+    if (memcmp(stored_mac, read_log.mac, 32) == 0) {
+        printk("Log valid\n");
+    } else {
+        printk("Log tampered\n");
+    }
+}
+
 int main(void){
 
     // Declare the varaibles required for the bme280 sensor
@@ -87,6 +109,7 @@ int main(void){
     // Declare the RNG tokens 32 bit
     uint8_t token[4];
 
+    // Struct to enter the data into the log
     struct log_entry my_log;
 
     /* CHECK IF DEVICES ARE READY */
@@ -131,12 +154,8 @@ int main(void){
 
     printk("NVS mounted successfully\n");
     
-    rc = flash_erase(storage_dev, 0, FIXED_PARTITION_SIZE(storage_partition));
-
-    if (rc != 0) {
-        printk("Flash erase failed: %d\n", rc);
-    }
-        
+    
+    // Read the sequence number from the NVS
     rc = nvs_read(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
 
     if (rc < 0) {
@@ -148,8 +167,10 @@ int main(void){
         printk("Sequence number fetched %d\n", current_seq);
     }
 
+    // Read the HMAC key from the NVS
     rc = nvs_read(&fs, HMAC_ID, hmac_key, sizeof(hmac_key));
 
+    // If HMAC not found geenrate one and write to the NVS with a different ID
     if (rc <= 0) {
         printk("No key found, generating new one...\n");
 
@@ -165,6 +186,7 @@ int main(void){
 
     while(1){
 
+        // Obtain the sensor readings
         ret = sensor_sample_fetch(bme280);
         if(ret < 0){
             printk("Sample Fetch Error: %d\n", ret);
@@ -209,6 +231,8 @@ int main(void){
         if (rc == 0) {
             printk("Log #%d saved to storage at offset %d\n", current_seq, write_offset);
 
+            // Verify the stored log
+            verify_log(write_offset);
             write_offset += sizeof(my_log);
 
             if (write_offset + sizeof(my_log) > FIXED_PARTITION_SIZE(storage_partition)) {
@@ -231,5 +255,6 @@ int main(void){
 
         k_msleep(1000);
     }
+
 
 }
