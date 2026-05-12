@@ -16,12 +16,11 @@
 // Include the APIs of mbedtls
 #include <mbedtls/md.h>
 
+// Retrieve the defined devices from the devicetree //
 
-// Retrieve the Sensor device
-static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp));
+static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp)); // Retrieve the Sensor device
+static const struct device *const dev_rng = DEVICE_DT_GET(DT_NODELABEL(rng)); // Retrieve the RNG device
 
-// Retrieve the RNG device
-static const struct device *const dev_rng = DEVICE_DT_GET(DT_NODELABEL(rng));
 
 // Define the nvs file system structure
 static struct nvs_fs fs;
@@ -30,11 +29,14 @@ static struct nvs_fs fs;
 #define STORAGE_PARTITION FIXED_PARTITION_DEVICE(storage_partition)
 static const struct device *const storage_dev = STORAGE_PARTITION;
 
-// Let the ID for the sequence number be 1
-#define SEQ_NUM_ID 1
+// Define the IDS used for the NVS write later on //
 
-// Let the ID for the HMAC be 2#
-#define HMAC_ID 2
+#define SEQ_NUM_ID 1    // Let the ID for the sequence number be 1
+
+
+#define HMAC_ID 2   // Let the ID for the HMAC be 2
+
+
 // Local variable to hold the number
 static uint32_t current_seq = 0;
 
@@ -125,7 +127,7 @@ int main(void){
         }
 
 
-    /* NVS SETUP*/
+    // NVS setup //
 
     // Set up the NVS as a file manager
     fs.flash_device = FIXED_PARTITION_DEVICE(nvs_partition);
@@ -199,7 +201,7 @@ int main(void){
             continue;
         }
         
-        // Get the anti-replay tokens
+        // Get the anti-replay tokens for each sensor data logging
         if(entropy_get_entropy(dev_rng, token, sizeof(token))!=0)
         {
             printk("Token generation failed\n");
@@ -212,8 +214,10 @@ int main(void){
         // Link it to the struct
         my_log.seq_num = current_seq;
 
-        // Save the NEW number back to NVS 
+        // Save the new number back to NVS 
         nvs_write(&fs, SEQ_NUM_ID, &current_seq, sizeof(current_seq));
+
+        // Load the ttemperature values to the data struct
         my_log.temp_mantissa = temp.val1;
         my_log.temp_fraction = temp.val2;
 
@@ -221,11 +225,13 @@ int main(void){
 
         memset(my_log.mac, 0, sizeof(my_log.mac));
 
+        // Compute the HMAC using the data struct and the hmac key
         if (compute_hmac(&my_log, hmac_key) != 0) {
             printk("HMAC computation failed\n");
             continue;
         }
-
+        
+        // Write the data log into the storage partition
         rc = flash_write(storage_dev, write_offset, &my_log, sizeof(my_log));
 
         if (rc == 0) {
