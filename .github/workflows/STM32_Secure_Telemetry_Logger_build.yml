@@ -1,4 +1,4 @@
-name: Build Zephyr blinky_stm32 (STM32F303RE)
+name: Build Zephyr STM32_Secure_Telemetry_Logger (STM32F303RE)
 on:
   push:
     branches:
