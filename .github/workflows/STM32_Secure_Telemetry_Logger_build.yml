@@ -40,7 +40,7 @@ jobs:
           west build \
             --pristine \
             --board nucleo_f303re \
-            Zephyr/blinky_stm32
+            Zephyr/STM32_Secure_Telemetry_Logger
       - name: Upload firmware binary
         uses: actions/upload-artifact@v4
         with:
