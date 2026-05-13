@@ -35,7 +35,7 @@ jobs:
       - name: Export Zephyr CMake package
         run: |
           west zephyr-export
-      - name: Build blinky_stm32
+      - name: Build STM32_Secure_Telemetry_Logger
         run: |
           west build \
             --pristine \
