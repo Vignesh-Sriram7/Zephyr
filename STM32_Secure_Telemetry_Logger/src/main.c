@@ -261,6 +261,6 @@ int main(void){
 
         k_msleep(1000);
     }
-
+    return 0;
 
 }
