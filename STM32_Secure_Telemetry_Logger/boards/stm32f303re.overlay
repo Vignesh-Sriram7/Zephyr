@@ -6,7 +6,6 @@
         zephyr,entropy = &rng;
 	};
 
-    /
     aliases {
         my-temp = &my_bme280_i2c;   // Alias for BME280 temperature sensor
     };
@@ -27,8 +26,8 @@
         storage_partition: partition@7e800 {
             label = "storage";
             reg = <0x7e800 0x1800>;
+        };
     };
-};
 };
 
 // The RNG is enabled to generate random numbers for the sequence number of the telemetry log
