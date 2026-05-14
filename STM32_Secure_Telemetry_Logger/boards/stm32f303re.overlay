@@ -21,11 +21,13 @@
         nvs_partition: partition@7d000 {
             label = "nvs";
             reg = <0x7d000 0x1800>;
+            status = "okay";
         };
 
         storage_partition: partition@7e800 {
             label = "storage";
             reg = <0x7e800 0x1800>;
+            status = "okay";
         };
     };
 };
@@ -46,6 +48,7 @@
     my_bme280_i2c: bme280@77 {
         compatible = "bosch,bme280";
         reg = <0x77>;
+        status = "okay";
     };
 };
 
