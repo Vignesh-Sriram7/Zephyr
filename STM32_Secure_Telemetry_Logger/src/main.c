@@ -11,7 +11,7 @@
 #include <zephyr/drivers/sensor.h> // BME280 implements this API
 
 // To generate anti replay tokens
-#include <zephyr/drivers/entropy.h>
+#include <zephyr/random/random.h>
 
 // Include the APIs of mbedtls
 #include <mbedtls/md.h>
@@ -19,8 +19,6 @@
 // Retrieve the defined devices from the devicetree //
 
 static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp)); // Retrieve the Sensor device
-static const struct device *const dev_rng = DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy));
-
 
 // Define the nvs file system structure
 static struct nvs_fs fs;
@@ -121,11 +119,6 @@ int main(void){
             return 0;
         }
 
-    if(!device_is_ready(dev_rng)){
-            printk("Device %s is not ready.\n", dev_rng->name);
-            return 0;
-        }
-
 
     // NVS setup //
 
@@ -176,7 +169,7 @@ int main(void){
     if (rc <= 0) {
         printk("No key found, generating new one...\n");
 
-        if (entropy_get_entropy(dev_rng, hmac_key, sizeof(hmac_key)) != 0) {
+        if (sys_rand_get(hmac_key, sizeof(hmac_key)) != 0) {
             printk("Failed to generate HMAC key\n");
             return 0;
         }
@@ -202,7 +195,7 @@ int main(void){
         }
         
         // Get the anti-replay tokens for each sensor data logging
-        if(entropy_get_entropy(dev_rng, token, sizeof(token))!=0)
+        if(sys_rand_get(token, sizeof(token))!=0)
         {
             printk("Token generation failed\n");
             continue;
