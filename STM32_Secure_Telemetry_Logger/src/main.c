@@ -19,7 +19,7 @@
 // Retrieve the defined devices from the devicetree //
 
 static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp)); // Retrieve the Sensor device
-static const struct device *const dev_rng = DEVICE_DT_GET(DT_NODELABEL(rng)); // Retrieve the RNG device
+static const struct device *const dev_rng = DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy));
 
 
 // Define the nvs file system structure

@@ -1,9 +1,7 @@
 / {
-    /* The chosen node is used to specify the flash and entropy devices for the system  
-       which are therefore defined partitions in flash0 and the Random Number Generator RNG*/
+    /* The chosen node is used to specify the flash*/
     chosen {
 		zephyr,flash = &flash0;
-        zephyr,entropy = &rng;
 	};
 
     aliases {
@@ -32,10 +30,6 @@
     };
 };
 
-// The RNG is enabled to generate random numbers for the sequence number of the telemetry log
-&rng {
-    status = "okay";
-};
 
 // The BME280 sensor is defined as a child of the I2C1 bus with its compatible and I2C address
 &i2c1 {

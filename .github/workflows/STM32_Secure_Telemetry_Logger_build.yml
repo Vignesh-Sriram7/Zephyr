@@ -17,7 +17,7 @@ on:
   workflow_dispatch:  # Allows manual trigger from GitHub UI
 jobs:
   build:
-    name: Build blinky_stm32 for nucleo_f303re
+    name: Build secure_logger for nucleo_f303re
     runs-on: ubuntu-22.04
     container:
       image: ghcr.io/zephyrproject-rtos/ci:v0.27.4
