@@ -168,11 +168,7 @@ int main(void){
     // If HMAC not found geenrate one and write to the NVS with a different ID
     if (rc <= 0) {
         printk("No key found, generating new one...\n");
-
-        if (sys_rand_get(hmac_key, sizeof(hmac_key)) != 0) {
-            printk("Failed to generate HMAC key\n");
-            return 0;
-        }
+        sys_rand_get(hmac_key, sizeof(hmac_key));
 
         nvs_write(&fs, HMAC_ID, hmac_key, sizeof(hmac_key));
     } else {
@@ -195,11 +191,7 @@ int main(void){
         }
         
         // Get the anti-replay tokens for each sensor data logging
-        if(sys_rand_get(token, sizeof(token))!=0)
-        {
-            printk("Token generation failed\n");
-            continue;
-        }
+        sys_rand_get(token, sizeof(token));
 
         // Increment the counter
         current_seq++;
