@@ -1,0 +1,62 @@
+name: Build ESP32_Linux_Telemetry (ESP32)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'ESP32_Linux_Telemetry/**'
+      - '.github/workflows/esp32_linux_telemetry_build.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'ESP32_Linux_Telemetry/**'
+      - '.github/workflows/esp32_linux_telemetry_build.yml'  
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    name: Build ESP32_Linux_Telemetry for esp32_devkitc_wroom
+    runs-on: ubuntu-22.04
+
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.27.4
+
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: Zephyr   # checked out into a subfolder so west can manage the workspace
+
+      - name: Initialize west workspace
+        run: |
+          west init -l Zephyr
+          west update --narrow --fetch-opt=--depth=1
+
+      - name: Fetch Espressif binary blobs
+        run: |
+          west blobs fetch hal_espressif
+
+      - name: Export Zephyr CMake package
+        run: |
+          west zephyr-export
+
+      - name: Build ESP32_Linux_Telemetry
+        run: |
+          west build \
+            --pristine \
+            --board esp32_devkitc_wroom/esp32/procpu \
+            Zephyr/ESP32_Linux_Telemetry \
+            -- \
+      - name: Upload firmware binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32_linux_telemetry_${{ github.sha }}
+          path: build/zephyr/zephyr.bin
+          retention-days: 30
