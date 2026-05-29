@@ -6,7 +6,7 @@
     /* Define the DHT11 sensor as a new child of the root node */
     dht11: dht11 {
         compatible = "aosong,dht";
-        gpios = <&gpioa 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        dio-gpios = <&gpioa 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         status = "okay";
     };
 };
