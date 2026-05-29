@@ -1,17 +1,15 @@
 #include <zephyr/kernel.h>
-// Header for use of I2C bus
-#include <zephyr/drivers/i2c.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h> // Device configurations
 #include <zephyr/drivers/sensor.h> // BME280 implements this API
 
 // Retrieve the defined devices from the devicetree //
 
-static const struct device *const bme280 = DEVICE_DT_GET(DT_ALIAS(my_temp)); // Retrieve the Sensor device
+static const struct device *const dht11 = DEVICE_DT_GET(DT_ALIAS(my_sensor)); // Retrieve the Sensor device
 
 int main(void){
 
-    // Declare the varaibles required for the bme280 sensor
+    // Declare the varaibles required for the dht11 sensor
     int ret;
     struct sensor_value temp;
     struct sensor_value hum;
@@ -19,27 +17,27 @@ int main(void){
 
     /* CHECK IF DEVICES ARE READY */
 
-    if(!device_is_ready(bme280)){
-            printk("Device %s is not ready.\n", bme280->name);
+    if(!device_is_ready(dht11)){
+            printk("Device %s is not ready.\n", dht11->name);
             return 0;
         }
     
     while(1){
 
         // Obtain the sensor readings
-        ret = sensor_sample_fetch(bme280);
+        ret = sensor_sample_fetch(dht11);
         if(ret < 0){
             printk("Sample Fetch Error: %d\n", ret);
             continue;
         }
 
-        ret = sensor_channel_get(bme280, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+        ret = sensor_channel_get(dht11, SENSOR_CHAN_AMBIENT_TEMP, &temp);
         if(ret < 0){
             printk("Channel Get Error: %d\n", ret);
             continue;
         }
 
-        ret = sensor_channel_get(bme280, SENSOR_CHAN_HUMIDITY, &hum);
+        ret = sensor_channel_get(dht11, SENSOR_CHAN_HUMIDITY, &hum);
         if(ret<0)
         {
             printk("Channel Get Error: %d\n", ret);

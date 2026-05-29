@@ -1,22 +1,12 @@
 / {
-
     aliases {
-        my-temp = &my_bme280_i2c;   // Alias for BME280 temperature sensor
+        my-sensor = &dht11;   // Point your alias to the new dht11 node
     };
-};
 
-
-// The BME280 sensor is defined as a child of the I2C1 bus with its compatible and I2C address
-&i2c1 {
-    status = "okay";
-    pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
-    pinctrl-names = "default";
-    clock-frequency = <I2C_BITRATE_STANDARD>;
-
-    /* The sensor is a child of the bus */
-    my_bme280_i2c: bme280@77 {
-        compatible = "bosch,bme280";
-        reg = <0x77>;
+    /* Define the DHT11 sensor as a new child of the root node */
+    dht11: dht11 {
+        compatible = "aosong,dht";
+        gpios = <&gpioa 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         status = "okay";
     };
 };
@@ -25,11 +15,4 @@
 &usart2 {
     status = "okay";
     current-speed = <115200>;
-};
-
-&usb {
-	status = "okay";
-	cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-	};
 };
