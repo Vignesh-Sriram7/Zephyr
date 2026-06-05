@@ -8,7 +8,7 @@
 //static const struct device *const dht11 = DEVICE_DT_GET(DT_ALIAS(my_sensor)); // Retrieve the Sensor device
 
 //int main(void){
-void main(void) {
+int main(void) {
     // Declare the varaibles required for the dht11 sensor
     //int ret;
     //struct sensor_value temp;
@@ -52,11 +52,11 @@ void main(void) {
 
         // Protocol format: TEMP:XX.XX,HUM:XX.XX,TS:XXXX\n
         //printk("TEMP:%d.%02d,HUM:%d.%02d,TS:%u\n", temp.val1, (temp.val2 / 10000), hum.val1, (hum.val2 / 10000), timestamp);
-        printk("TEMP:%.2f,HUM:%.2f,TS:%u\n", temp, hum, timestamp);
+        printk("TEMP:%.2f,HUM:%.2f,TS:%u\n", (double)temp, (double)hum, timestamp);
         
         k_msleep(1000);
     }
     
-    //return 0;
+    return 0;
 }
         
