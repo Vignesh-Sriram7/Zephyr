@@ -8,7 +8,7 @@ int main ()
 {
 
 std::cout << " Linux C++ Telemetry Engine " << std::endl;
-std::ifstream serial_port("dev/ttyACM0");
+std::ifstream serial_port("/dev/ttyACM0", std::ios::in | std::ios::binary);
 
 if(!serial_port.is_open())
 {
