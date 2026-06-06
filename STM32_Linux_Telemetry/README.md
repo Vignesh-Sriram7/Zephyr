@@ -282,3 +282,6 @@ This project focuses on **embedded-to-Linux telemetry integration** and demonstr
 
 ## Output
 
+<p align="center">
+  <img src="Screenshot 2026-06-06 142554.png" width="450">
+</p>
